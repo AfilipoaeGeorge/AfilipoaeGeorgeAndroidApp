@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MindFocusTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    DatabaseTesterScreen(modifier = Modifier.padding(innerPadding))
+                    Greeting("Android", modifier = Modifier.padding(innerPadding))
                 }
             }
         }
