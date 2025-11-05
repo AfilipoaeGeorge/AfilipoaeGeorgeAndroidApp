@@ -1,5 +1,16 @@
 package com.example.mindfocus.ui.feature.session
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,18 +25,32 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
-import android.view.ViewGroup
-import android.widget.FrameLayout
+import com.example.mindfocus.core.camera.FaceLandmarkerHelper
+import com.example.mindfocus.core.camera.getCameraProvider
+import com.example.mindfocus.core.vibration.VibrationHelper
+import com.example.mindfocus.ui.feature.session.components.CameraPermission
+import com.example.mindfocus.ui.feature.session.components.OverlayCamera
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
+import kotlinx.coroutines.launch
+import java.util.concurrent.Executors
+import kotlin.math.max
 
 @Composable
 fun SessionScreen(
@@ -35,24 +60,141 @@ fun SessionScreen(
     onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val viewModel: SessionViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
     
-    // Auto-start session when screen opens
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+    }
+    
+    val faceImage = remember { mutableStateOf<MPImage?>(null) }
+    val faceResult = remember { mutableStateOf<FaceLandmarkerResult?>(null) }
+    
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    
+    val faceHelper = remember {
+        FaceLandmarkerHelper(
+            context,
+            faceLandmarkErrorListener = { error ->
+                mainHandler.post {
+                }
+            },
+            faceLandmarkResultListener = { result, image ->
+                mainHandler.post {
+                    try {
+                        faceImage.value = image
+                        faceResult.value = result
+                        viewModel.updateFaceMetrics(result)
+                        
+                        val currentState = viewModel.uiState.value
+                        if (currentState.shouldVibrate && currentState.focusScore < 60) {
+                            VibrationHelper.vibrate(context)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("SessionScreen", "Error updating UI: ${e.message}", e)
+                    }
+                }
+            }
+        )
+    }
+    
+    val cameraExecutor = remember { Executors.newSingleThreadScheduledExecutor() }
+    
+    val lensFacing = remember { mutableStateOf(CameraSelector.LENS_FACING_FRONT) }
+    
     LaunchedEffect(Unit) {
         if (!uiState.isRunning) {
             viewModel.startSession()
         }
     }
     
-    // Sample metrics - replace with actual camera data
-    LaunchedEffect(uiState.isRunning, uiState.isPaused) {
-        if (uiState.isRunning && !uiState.isPaused) {
-            // Simulate metrics updates (replace with actual camera analysis)
-            // viewModel.updateMetrics(ear, mar, headPose, focusScore)
+    LaunchedEffect(key1 = uiState.shouldVibrate, key2 = uiState.focusScore) {
+        if (uiState.shouldVibrate) {
+            try {
+                VibrationHelper.vibrate(context)
+            } catch (e: Exception) {
+                android.util.Log.e("SessionScreen", "Error in vibration: ${e.message}", e)
+            }
         }
     }
-
+    
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_DESTROY) {
+                lifecycleOwner.lifecycleScope.launch {
+                    cameraExecutor.shutdown()
+                    val provider = context.getCameraProvider()
+                    provider.unbindAll()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+                cameraExecutor.shutdown()
+                faceHelper.clearFaceLandmarker()
+            }
+    }
+    
+    val previewView = remember {
+        PreviewView(context).apply {
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+        }
+    }
+    
+    val preview = Preview.Builder()
+        .build()
+    
+    val imageAnalysis = ImageAnalysis.Builder()
+        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+        .setTargetResolution(android.util.Size(640, 480))
+        .build()
+    
+    LaunchedEffect(lensFacing.value, hasCameraPermission) {
+        if (!hasCameraPermission) {
+            viewModel.freezeUi()
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        } else {
+            viewModel.unfreezeUi()
+            val selector = CameraSelector.Builder()
+                .requireLensFacing(lensFacing.value)
+                .build()
+            
+            val provider = context.getCameraProvider()
+            provider.unbindAll()
+            provider.bindToLifecycle(lifecycleOwner, selector, preview, imageAnalysis)
+            preview.setSurfaceProvider(previewView.surfaceProvider)
+            
+            if (!uiState.isPaused) {
+                setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper, lensFacing.value)
+            }
+        }
+    }
+    
+    LaunchedEffect(uiState.isPaused, hasCameraPermission) {
+        if (hasCameraPermission) {
+            if (!uiState.isPaused) {
+                setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper, lensFacing.value)
+            } else {
+                imageAnalysis.setAnalyzer(cameraExecutor) { image ->
+                    image.close()
+                }
+            }
+        }
+    }
+    
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -99,7 +241,13 @@ fun SessionScreen(
                 }
                 
                 IconButton(
-                    onClick = onFlipCameraClick
+                    onClick = {
+                        lensFacing.value = if (lensFacing.value == CameraSelector.LENS_FACING_BACK)
+                            CameraSelector.LENS_FACING_FRONT
+                        else
+                            CameraSelector.LENS_FACING_BACK
+                        onFlipCameraClick()
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.SwapHoriz,
@@ -108,9 +256,9 @@ fun SessionScreen(
                     )
                 }
             }
-
+            
             Spacer(modifier = Modifier.height(8.dp))
-
+            
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -121,35 +269,50 @@ fun SessionScreen(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     AndroidView(
-                        factory = { context ->
-                            FrameLayout(context).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                setBackgroundColor(android.graphics.Color.DKGRAY)
-                            }
-                        },
+                        factory = { previewView },
                         modifier = Modifier.fillMaxSize()
                     )
-
-                    Text(
-                        text = stringResource(R.string.facial_landmarks_overlay),
-                        fontSize = 16.sp,
-                        color = colorResource(R.color.amber),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Medium
-                    )
+                    
+                    if (!hasCameraPermission) {
+                        CameraPermission(
+                            onOpenSettings = {
+                                val intent = Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.fromParts("package", context.packageName, null)
+                                )
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.matchParentSize()
+                        )
+                    } else if (!uiState.isPaused && faceImage.value != null && faceResult.value != null) {
+                        val imageWidth = faceImage.value?.width ?: 0
+                        val imageHeight = faceImage.value?.height ?: 0
+                        
+                        var overlaySize by remember { mutableStateOf(android.util.Size(0, 0)) }
+                        
+                        val scaleFactor = if (imageWidth > 0 && imageHeight > 0 && overlaySize.width > 0 && overlaySize.height > 0) {
+                            max(overlaySize.width * 1f / imageWidth, overlaySize.height * 1f / imageHeight)
+                        } else 1f
+                        
+                        OverlayCamera(
+                            faceResult = faceResult.value,
+                            imageWidth = imageWidth,
+                            imageHeight = imageHeight,
+                            scaleFactor = scaleFactor,
+                            modifier = Modifier
+                                .matchParentSize()
+                                .onSizeChanged { size ->
+                                    overlaySize = android.util.Size(size.width, size.height)
+                                }
+                        )
+                    }
                 }
             }
-
+            
             FocusScoreCard(
-                score = uiState.focusScore,
+                score = uiState.focusScore.toInt(),
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -169,23 +332,23 @@ fun SessionScreen(
                 )
                 MetricCard(
                     label = stringResource(R.string.head_pose_label),
-                    value = uiState.headPose,
+                    value = String.format("%.1f°", uiState.headPose),
                     modifier = Modifier.weight(1f)
                 )
             }
             
             SessionTimerCard(
-                elapsedSeconds = uiState.elapsedTime,
+                elapsedSeconds = uiState.timerSeconds,
                 modifier = Modifier.fillMaxWidth()
             )
-
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
                     onClick = {
-                        viewModel.stop()
+                        viewModel.stopSession()
                         onStopClick()
                     },
                     modifier = Modifier
@@ -204,13 +367,13 @@ fun SessionScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.stop_button), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
-
+                
                 Button(
                     onClick = {
                         if (uiState.isPaused) {
-                            viewModel.resume()
+                            viewModel.resumeSession()
                         } else {
-                            viewModel.pause()
+                            viewModel.pauseSession()
                         }
                         onPauseResumeClick()
                     },
@@ -239,6 +402,27 @@ fun SessionScreen(
     }
 }
 
+private fun setImageAnalyzer(
+    imageAnalysis: ImageAnalysis,
+    cameraExecutor: java.util.concurrent.ExecutorService,
+    faceLandmarkerHelper: FaceLandmarkerHelper,
+    lensFacing: Int
+) {
+    imageAnalysis.setAnalyzer(cameraExecutor) { image ->
+        try {
+            faceLandmarkerHelper.detect(image, lensFacing == CameraSelector.LENS_FACING_FRONT)
+        } catch (e: Exception) {
+            android.util.Log.e("ImageAnalysis", "Error processing image: ${e.message}", e)
+        } finally {
+            try {
+                image.close()
+            } catch (e: Exception) {
+                android.util.Log.e("ImageAnalysis", "Error closing image: ${e.message}", e)
+            }
+        }
+    }
+}
+
 @Composable
 private fun FocusScoreCard(
     score: Int,
@@ -249,7 +433,7 @@ private fun FocusScoreCard(
         score >= 50 -> colorResource(R.color.skyblue)
         else -> colorResource(R.color.coralred)
     }
-
+    
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
@@ -290,7 +474,7 @@ private fun FocusScoreCard(
                     )
                 }
             }
-
+            
             CircularProgressIndicator(
                 progress = { score / 100f },
                 modifier = Modifier.size(60.dp),
@@ -347,7 +531,7 @@ private fun SessionTimerCard(
     val hours = elapsedSeconds / 3600
     val minutes = (elapsedSeconds % 3600) / 60
     val seconds = elapsedSeconds % 60
-
+    
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
@@ -382,4 +566,3 @@ private fun SessionTimerCard(
         }
     }
 }
-
