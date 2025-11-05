@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,16 +39,14 @@ data class SettingsItem(
 
 @Composable
 fun SettingsScreen(
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var cameraMonitoringEnabled by remember { mutableStateOf(true) }
-    var noiseMonitoringEnabled by remember { mutableStateOf(true) }
     var autoDndEnabled by remember { mutableStateOf(true) }
     var lowFocusAlertsEnabled by remember { mutableStateOf(true) }
-    var noiseAlertsEnabled by remember { mutableStateOf(true) }
     var dailyRemindersEnabled by remember { mutableStateOf(false) }
-    var keepScreenOnEnabled by remember { mutableStateOf(true) }
-    
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -73,12 +72,26 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.settings_title),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorResource(R.color.amber)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IconButton(
+                        onClick = onNavigateBack
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colorResource(R.color.amber)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.settings_title),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorResource(R.color.amber)
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -99,24 +112,6 @@ fun SettingsScreen(
                                     isSwitch = true,
                                     isEnabled = cameraMonitoringEnabled,
                                     onClick = { cameraMonitoringEnabled = !cameraMonitoringEnabled }
-                                )
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
-                item {
-                    SettingsSectionCard(
-                        section = SettingsSection(
-                            title = stringResource(R.string.settings_microphone),
-                            icon = Icons.Outlined.Mic,
-                            items = listOf(
-                                SettingsItem(
-                                    title = stringResource(R.string.enable_noise_monitoring),
-                                    isSwitch = true,
-                                    isEnabled = noiseMonitoringEnabled,
-                                    onClick = { noiseMonitoringEnabled = !noiseMonitoringEnabled }
                                 )
                             )
                         ),
@@ -155,12 +150,6 @@ fun SettingsScreen(
                                     onClick = { lowFocusAlertsEnabled = !lowFocusAlertsEnabled }
                                 ),
                                 SettingsItem(
-                                    title = stringResource(R.string.noise_alerts),
-                                    isSwitch = true,
-                                    isEnabled = noiseAlertsEnabled,
-                                    onClick = { noiseAlertsEnabled = !noiseAlertsEnabled }
-                                ),
-                                SettingsItem(
                                     title = stringResource(R.string.daily_reminders),
                                     isSwitch = true,
                                     isEnabled = dailyRemindersEnabled,
@@ -171,24 +160,7 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                
-                item {
-                    SettingsSectionCard(
-                        section = SettingsSection(
-                            title = stringResource(R.string.settings_display),
-                            icon = Icons.Outlined.Brightness6,
-                            items = listOf(
-                                SettingsItem(
-                                    title = stringResource(R.string.keep_screen_on),
-                                    isSwitch = true,
-                                    isEnabled = keepScreenOnEnabled,
-                                    onClick = { keepScreenOnEnabled = !keepScreenOnEnabled }
-                                )
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+
                 
                 item {
                     SettingsSectionCard(

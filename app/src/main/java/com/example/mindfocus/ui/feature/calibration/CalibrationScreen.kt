@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -28,14 +30,26 @@ import android.widget.FrameLayout
 fun CalibrationScreen(
     onStopClick: () -> Unit = {},
     onPauseResumeClick: () -> Unit = {},
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var isPaused by remember { mutableStateOf(false) }
-    var remainingTime by remember { mutableIntStateOf(60) } // in seconds
-    val ear = 0.28
-    val mar = 0.45
-    val headPose = "5°"
-    val focusScore = 65
+    val viewModel: CalibrationViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    
+    // Auto-start calibration when screen opens
+    LaunchedEffect(Unit) {
+        if (!uiState.isRunning) {
+            viewModel.startCalibration()
+        }
+    }
+    
+    // Sample metrics - replace with actual camera data
+    LaunchedEffect(uiState.isRunning, uiState.isPaused) {
+        if (uiState.isRunning && !uiState.isPaused) {
+            // Simulate metrics updates (replace with actual camera analysis)
+            // viewModel.updateMetrics(ear, mar, headPose, focusScore)
+        }
+    }
     
     Box(
         modifier = modifier
@@ -61,12 +75,26 @@ fun CalibrationScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.calibration_title),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorResource(R.color.amber)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IconButton(
+                        onClick = onNavigateBack
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colorResource(R.color.amber)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.calibration_title),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorResource(R.color.amber)
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.height(8.dp))
@@ -110,7 +138,7 @@ fun CalibrationScreen(
             }
             
             FocusScoreCard(
-                score = focusScore,
+                score = uiState.focusScore,
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -120,23 +148,23 @@ fun CalibrationScreen(
             ) {
                 MetricCard(
                     label = stringResource(R.string.ear_label),
-                    value = String.format("%.2f", ear),
+                    value = String.format("%.2f", uiState.ear),
                     modifier = Modifier.weight(1f)
                 )
                 MetricCard(
                     label = stringResource(R.string.mar_label),
-                    value = String.format("%.2f", mar),
+                    value = String.format("%.2f", uiState.mar),
                     modifier = Modifier.weight(1f)
                 )
                 MetricCard(
                     label = stringResource(R.string.head_pose_label),
-                    value = headPose,
+                    value = uiState.headPose,
                     modifier = Modifier.weight(1f)
                 )
             }
             
             TimerCard(
-                remainingSeconds = remainingTime,
+                remainingSeconds = uiState.remainingTime,
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -147,7 +175,10 @@ fun CalibrationScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
-                    onClick = onStopClick,
+                    onClick = {
+                        viewModel.stop()
+                        onStopClick()
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
@@ -167,7 +198,11 @@ fun CalibrationScreen(
                 
                 Button(
                     onClick = {
-                        isPaused = !isPaused
+                        if (uiState.isPaused) {
+                            viewModel.resume()
+                        } else {
+                            viewModel.pause()
+                        }
                         onPauseResumeClick()
                     },
                     modifier = Modifier
@@ -179,13 +214,13 @@ fun CalibrationScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(
-                        imageVector = if (isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
-                        contentDescription = if (isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
+                        imageVector = if (uiState.isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                        contentDescription = if (uiState.isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
+                        text = if (uiState.isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )

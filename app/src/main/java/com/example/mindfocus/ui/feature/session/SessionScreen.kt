@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -30,14 +32,26 @@ fun SessionScreen(
     onStopClick: () -> Unit = {},
     onPauseResumeClick: () -> Unit = {},
     onFlipCameraClick: () -> Unit = {},
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var isPaused by remember { mutableStateOf(false) }
-    var elapsedTime by remember { mutableIntStateOf(0) }
-    val focusScore = 72
-    val ear = 0.30
-    val mar = 0.42
-    val headPose = "3°"
+    val viewModel: SessionViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    
+    // Auto-start session when screen opens
+    LaunchedEffect(Unit) {
+        if (!uiState.isRunning) {
+            viewModel.startSession()
+        }
+    }
+    
+    // Sample metrics - replace with actual camera data
+    LaunchedEffect(uiState.isRunning, uiState.isPaused) {
+        if (uiState.isRunning && !uiState.isPaused) {
+            // Simulate metrics updates (replace with actual camera analysis)
+            // viewModel.updateMetrics(ear, mar, headPose, focusScore)
+        }
+    }
 
     Box(
         modifier = modifier
@@ -63,13 +77,27 @@ fun SessionScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.session_title),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorResource(R.color.amber)
-                )
-
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IconButton(
+                        onClick = onNavigateBack
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colorResource(R.color.amber)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.session_title),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorResource(R.color.amber)
+                    )
+                }
+                
                 IconButton(
                     onClick = onFlipCameraClick
                 ) {
@@ -121,33 +149,33 @@ fun SessionScreen(
             }
 
             FocusScoreCard(
-                score = focusScore,
+                score = uiState.focusScore,
                 modifier = Modifier.fillMaxWidth()
             )
-
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 MetricCard(
                     label = stringResource(R.string.ear_label),
-                    value = String.format("%.2f", ear),
+                    value = String.format("%.2f", uiState.ear),
                     modifier = Modifier.weight(1f)
                 )
                 MetricCard(
                     label = stringResource(R.string.mar_label),
-                    value = String.format("%.2f", mar),
+                    value = String.format("%.2f", uiState.mar),
                     modifier = Modifier.weight(1f)
                 )
                 MetricCard(
                     label = stringResource(R.string.head_pose_label),
-                    value = headPose,
+                    value = uiState.headPose,
                     modifier = Modifier.weight(1f)
                 )
             }
-
+            
             SessionTimerCard(
-                elapsedSeconds = elapsedTime,
+                elapsedSeconds = uiState.elapsedTime,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -156,7 +184,10 @@ fun SessionScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Button(
-                    onClick = onStopClick,
+                    onClick = {
+                        viewModel.stop()
+                        onStopClick()
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
@@ -176,7 +207,11 @@ fun SessionScreen(
 
                 Button(
                     onClick = {
-                        isPaused = !isPaused
+                        if (uiState.isPaused) {
+                            viewModel.resume()
+                        } else {
+                            viewModel.pause()
+                        }
                         onPauseResumeClick()
                     },
                     modifier = Modifier
@@ -188,13 +223,13 @@ fun SessionScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(
-                        imageVector = if (isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
-                        contentDescription = if (isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
+                        imageVector = if (uiState.isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                        contentDescription = if (uiState.isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
+                        text = if (uiState.isPaused) stringResource(R.string.resume_button) else stringResource(R.string.pause_button),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
