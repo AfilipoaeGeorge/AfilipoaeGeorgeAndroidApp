@@ -8,6 +8,8 @@ class UserRepository(private val db: MindFocusDatabase) {
 
     suspend fun upsert(user: UserEntity): Long = db.userDao().upsert(user)
 
+    suspend fun getById(id: Long): UserEntity? = db.userDao().getById(id)
+
     suspend fun getByEmail(email: String): UserEntity? = db.userDao().getByEmail(email)
 
     suspend fun getByUsername(username: String): UserEntity? = db.userDao().getByUsername(username)

@@ -26,8 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mindfocus.R
 import com.example.mindfocus.core.datastore.AuthPreferencesManager
+import com.example.mindfocus.data.local.MindFocusDatabase
+import com.example.mindfocus.data.repository.SessionRepository
+import com.example.mindfocus.data.repository.UserRepository
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun HomeScreen(
@@ -39,12 +42,16 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val authPreferencesManager = remember { AuthPreferencesManager(context) }
+    val database = remember { MindFocusDatabase.getInstance(context.applicationContext) }
+    val userRepository = remember { UserRepository(database) }
+    val sessionRepository = remember { SessionRepository(database) }
     
-    // Sample data - replace with actual data from ViewModel
-    val lastFocusScore = 75
-    val lastSessionDate = "2 hours ago"
+    val viewModel: HomeViewModel = viewModel {
+        HomeViewModel(context, authPreferencesManager, userRepository, sessionRepository)
+    }
+    
+    val uiState by viewModel.uiState.collectAsState()
     
     Box(
         modifier = modifier
@@ -93,10 +100,7 @@ fun HomeScreen(
                     
                     IconButton(
                         onClick = {
-                            scope.launch {
-                                authPreferencesManager.setLoggedOut()
-                            }
-                            onLogoutClick()
+                            viewModel.logout(onLogoutClick)
                         }
                     ) {
                         Icon(
@@ -110,11 +114,34 @@ fun HomeScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            LastFocusScoreCard(
-                focusScore = lastFocusScore,
-                lastSessionDate = lastSessionDate,
-                modifier = Modifier.fillMaxWidth()
-            )
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = colorResource(R.color.amber)
+                    )
+                }
+            } else {
+                LastFocusScoreCard(
+                    focusScore = uiState.lastFocusScore,
+                    lastSessionDate = uiState.lastSessionDate,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            
+            uiState.errorMessage?.let { errorMessage ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = errorMessage,
+                    color = colorResource(R.color.coralred),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -163,14 +190,18 @@ fun HomeScreen(
 
 @Composable
 private fun LastFocusScoreCard(
-    focusScore: Int,
-    lastSessionDate: String,
+    focusScore: Int?,
+    lastSessionDate: String?,
     modifier: Modifier = Modifier
 ) {
+    val displayScore = focusScore ?: 0
+    val displayDate = lastSessionDate ?: "No sessions yet"
+    
     val color = when {
-        focusScore >= 80 -> colorResource(R.color.amber)
-        focusScore >= 50 -> colorResource(R.color.skyblue)
-        else -> colorResource(R.color.coralred)
+        displayScore >= 80 -> colorResource(R.color.amber)
+        displayScore >= 50 -> colorResource(R.color.skyblue)
+        displayScore > 0 -> colorResource(R.color.skyblue)
+        else -> colorResource(R.color.lightsteelblue)
     }
     
     Card(
@@ -200,20 +231,22 @@ private fun LastFocusScoreCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "$focusScore",
+                    text = if (focusScore != null) "$displayScore" else "--",
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold,
                     color = color
                 )
-                Text(
-                    text = stringResource(R.string.focus_score_max),
-                    fontSize = 24.sp,
-                    color = colorResource(R.color.lightsteelblue)
-                )
+                if (focusScore != null) {
+                    Text(
+                        text = stringResource(R.string.focus_score_max),
+                        fontSize = 24.sp,
+                        color = colorResource(R.color.lightsteelblue)
+                    )
+                }
             }
             
             Text(
-                text = lastSessionDate,
+                text = displayDate,
                 fontSize = 12.sp,
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.7f)
             )

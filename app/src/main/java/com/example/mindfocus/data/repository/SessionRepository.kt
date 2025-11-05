@@ -23,6 +23,9 @@ class SessionRepository(private val db: MindFocusDatabase) {
         db.sessionDao().observeForUser(userId)
 
     suspend fun getById(id: Long): SessionEntity? = db.sessionDao().getById(id)
+    
+    suspend fun getLastCompletedSession(userId: Long): SessionEntity? = 
+        db.sessionDao().getLastCompletedSession(userId)
 
     suspend fun delete(id: Long) = db.sessionDao().delete(id)
 }
