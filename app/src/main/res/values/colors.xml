@@ -7,4 +7,13 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Session/Login colors -->
+    <color name="darkcharcoal">#FF1C1E26</color>
+    <color name="darkslategray">#FF2B2E3C</color>
+    <color name="midnightblue">#FF2C3040</color>
+    <color name="lightsteelblue">#FFB0BEC5</color>
+    <color name="amber">#FFFFD54F</color>
+    <color name="darkslateblue">#FF34384A</color>
+    <color name="skyblue">#FF64B5F6</color>
+    <color name="coralred">#FFE57373</color>
 </resources>

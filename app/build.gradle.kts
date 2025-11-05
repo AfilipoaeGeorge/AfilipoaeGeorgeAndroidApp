@@ -51,6 +51,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    
+    // Material Icons
+    implementation("androidx.compose.material:material-icons-extended")
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
@@ -59,6 +62,9 @@ dependencies {
     implementation("androidx.room:room-runtime:2.8.3")
     implementation("androidx.room:room-ktx:2.8.3")
     ksp("androidx.room:room-compiler:2.8.3")
+
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     testImplementation("androidx.room:room-testing:2.8.3")
 

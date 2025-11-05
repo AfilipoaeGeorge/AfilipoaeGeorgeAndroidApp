@@ -10,5 +10,7 @@ class UserRepository(private val db: MindFocusDatabase) {
 
     suspend fun getByEmail(email: String): UserEntity? = db.userDao().getByEmail(email)
 
+    suspend fun getByUsername(username: String): UserEntity? = db.userDao().getByUsername(username)
+
     fun observeAll(): Flow<List<UserEntity>> = db.userDao().observeAll()
 }
