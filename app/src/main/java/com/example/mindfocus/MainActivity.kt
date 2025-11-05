@@ -5,13 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.mindfocus.ui.debug.DatabaseTesterScreen
+import com.example.mindfocus.core.datastore.AuthPreferencesManager
+import com.example.mindfocus.ui.feature.home.HomeScreen
+import com.example.mindfocus.ui.feature.login.LoginScreen
 import com.example.mindfocus.ui.theme.MindFocusTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,26 +18,24 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MindFocusTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting("Android", modifier = Modifier.padding(innerPadding))
-                }
+                AppNavigation()
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MindFocusTheme {
-        Greeting("Android")
+fun AppNavigation() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val authPreferencesManager = remember { AuthPreferencesManager(context) }
+    val isLoggedIn by authPreferencesManager.isLoggedIn.collectAsState(initial = false)
+    
+    if (isLoggedIn) {
+        HomeScreen(modifier = Modifier.fillMaxSize())
+    } else {
+        LoginScreen(
+            onLoginSuccess = { /* State will automatically update via Flow */ },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

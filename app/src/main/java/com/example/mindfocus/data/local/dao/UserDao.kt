@@ -17,6 +17,9 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
     suspend fun getByEmail(email: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE displayName = :username LIMIT 1")
+    suspend fun getByUsername(username: String): UserEntity?
+
     @Query("SELECT * FROM users ORDER BY createdAtEpochMs DESC")
     fun observeAll(): Flow<List<UserEntity>>
 }
