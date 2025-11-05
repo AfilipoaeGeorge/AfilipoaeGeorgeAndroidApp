@@ -57,6 +57,7 @@ class HomeViewModel(
                     errorMessage = null
                 )
             } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Error loading user data: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = "Failed to load data: ${e.message}"
@@ -71,6 +72,7 @@ class HomeViewModel(
                 authPreferencesManager.setLoggedOut()
                 onLogoutComplete()
             } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Error logging out: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
                     errorMessage = "Logout failed: ${e.message}"
                 )

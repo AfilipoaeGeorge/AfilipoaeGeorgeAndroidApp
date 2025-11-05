@@ -40,6 +40,16 @@ android {
     buildFeatures {
         compose = true
     }
+    
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+    
+    androidResources {
+        noCompress("tflite", "task")
+    }
 }
 
 dependencies {
@@ -56,6 +66,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
 
     // Navigation Compose
@@ -68,6 +79,16 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // CameraX
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.extensions)
+
+    // MediaPipe
+    implementation(libs.google.mediapipe.tasks.vision)
 
     testImplementation("androidx.room:room-testing:2.8.3")
 

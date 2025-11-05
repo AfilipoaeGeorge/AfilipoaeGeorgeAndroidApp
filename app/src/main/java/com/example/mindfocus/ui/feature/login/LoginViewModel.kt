@@ -137,6 +137,7 @@ class LoginViewModel(
                     onSuccess(foundUser.id)
                 }
             } catch (e: Exception) {
+                android.util.Log.e("LoginViewModel", "Error in ${if (currentState.isRegisterMode) "registration" else "login"}: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = if (currentState.isRegisterMode) {
