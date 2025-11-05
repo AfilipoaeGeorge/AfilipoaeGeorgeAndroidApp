@@ -1,5 +1,8 @@
 <resources>
+    <!-- App Name -->
     <string name="app_name">MindFocus</string>
+    
+    <!-- Login Screen -->
     <string name="login_title">Welcome Back</string>
     <string name="login_subtitle">Sign in to continue your focus journey</string>
     <string name="username_hint">Username</string>
@@ -10,4 +13,82 @@
     <string name="email_empty">Email cannot be empty</string>
     <string name="email_invalid">Please enter a valid email address</string>
     <string name="login_failed">Login failed. Please try again.</string>
+    <string name="register_button">Register</string>
+    <string name="already_have_account">Already have an account? Login</string>
+    <string name="create_account_subtitle">Create your account to get started</string>
+    
+    <!-- Home Screen -->
+    <string name="home_app_logo">🧠 MindFocus</string>
+    <string name="last_focus_score">Last Focus Score</string>
+    <string name="focus_score_max">/ 100</string>
+    <string name="calibration_button">Calibration</string>
+    <string name="calibration_description">Calibrate your baseline metrics</string>
+    <string name="start_session_button">Start Session</string>
+    <string name="start_session_description">Begin tracking your focus</string>
+    <string name="history_button">History</string>
+    <string name="history_description">View past sessions</string>
+    
+    <!-- Calibration Screen -->
+    <string name="calibration_title">Calibration</string>
+    <string name="facial_landmarks_overlay">468 Facial Landmarks\nOverlay</string>
+    <string name="focus_score_label">Focus Score</string>
+    <string name="time_remaining">Time Remaining: </string>
+    <string name="stop_button">Stop</string>
+    <string name="pause_button">Pause</string>
+    <string name="resume_button">Resume</string>
+    
+    <!-- Session Screen -->
+    <string name="session_title">Focus Session</string>
+    <string name="session_time">Session Time: </string>
+    
+    <!-- History Screen -->
+    <string name="history_title">Session History</string>
+    <string name="sessions_count">%d sessions</string>
+    <string name="session_number">Session #%d</string>
+    <string name="start_time_label">Start Time</string>
+    <string name="end_time_label">End Time</string>
+    <string name="duration_label">Duration</string>
+    <string name="focus_score_evolution">Focus Score Evolution</string>
+    <string name="no_score_data">No score data available</string>
+    <string name="empty_history_emoji">📊</string>
+    <string name="empty_history_title">No Sessions Yet</string>
+    <string name="empty_history_message">Start your first focus session to see your history here</string>
+    
+    <!-- Metrics -->
+    <string name="ear_label">EAR</string>
+    <string name="mar_label">MAR</string>
+    <string name="head_pose_label">Head Pose</string>
+    
+    <!-- Common -->
+    <string name="flip_camera">Flip Camera</string>
+    <string name="stop_session">Stop Session</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_camera">Camera</string>
+    <string name="settings_camera_description">Camera monitoring settings</string>
+    <string name="settings_microphone">Microphone</string>
+    <string name="settings_microphone_description">Noise monitoring settings</string>
+    <string name="settings_dnd">Do Not Disturb</string>
+    <string name="settings_dnd_description">Auto-enable DND during sessions</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_description">Alert preferences</string>
+    <string name="settings_display">Display</string>
+    <string name="settings_display_description">Screen and brightness settings</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_privacy_description">Data and privacy settings</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_description">App information and help</string>
+    <string name="enable_camera_monitoring">Enable Camera Monitoring</string>
+    <string name="enable_noise_monitoring">Enable Noise Monitoring</string>
+    <string name="auto_enable_dnd">Auto-Enable DND</string>
+    <string name="low_focus_alerts">Low Focus Alerts</string>
+    <string name="noise_alerts">Noise Alerts</string>
+    <string name="daily_reminders">Daily Reminders</string>
+    <string name="keep_screen_on">Keep Screen On</string>
+    <string name="app_version">Version 1.0.0</string>
+    <string name="app_description">Focus and fatigue monitoring companion</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="delete_all_data">Delete All Data</string>
+    <string name="help_and_support">Help &amp; Support</string>
 </resources>

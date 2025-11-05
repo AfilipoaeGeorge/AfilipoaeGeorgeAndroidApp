@@ -90,12 +90,10 @@ private fun LoginContent(
         ) {
             Spacer(modifier = Modifier.height(60.dp))
             
-            // Logo/Title Section
             LoginHeader(isRegisterMode = uiState.isRegisterMode)
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // Login Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -112,7 +110,6 @@ private fun LoginContent(
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Username Field
                     LoginTextField(
                         value = uiState.username,
                         onValueChange = onUsernameChange,
@@ -121,7 +118,6 @@ private fun LoginContent(
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    // Email Field - only shown in register mode
                     if (uiState.isRegisterMode) {
                         LoginTextField(
                             value = uiState.email,
@@ -133,7 +129,6 @@ private fun LoginContent(
                         )
                     }
                     
-                    // Error Message
                     if (uiState.errorMessage != null) {
                         Text(
                             text = uiState.errorMessage,
@@ -145,7 +140,6 @@ private fun LoginContent(
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Login/Register Button
                     LoginButton(
                         onClick = onLoginClick,
                         isLoading = uiState.isLoading,
@@ -155,7 +149,6 @@ private fun LoginContent(
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Register/Login Link
                     RegisterLink(
                         onClick = onRegisterClick,
                         isRegisterMode = uiState.isRegisterMode,
@@ -173,7 +166,6 @@ private fun LoginHeader(isRegisterMode: Boolean) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // App Logo/Icon Placeholder
         Card(
             modifier = Modifier.size(100.dp),
             shape = RoundedCornerShape(24.dp),
@@ -200,12 +192,12 @@ private fun LoginHeader(isRegisterMode: Boolean) {
             letterSpacing = 1.sp
         )
         
-        Text(
-            text = if (isRegisterMode) {
-                "Create your account to get started"
-            } else {
-                stringResource(R.string.login_subtitle)
-            },
+                Text(
+                    text = if (isRegisterMode) {
+                        stringResource(R.string.create_account_subtitle)
+                    } else {
+                        stringResource(R.string.login_subtitle)
+                    },
             fontSize = 16.sp,
             color = colorResource(R.color.lightsteelblue),
             textAlign = TextAlign.Center
@@ -293,7 +285,7 @@ private fun LoginButton(
                 )
             } else {
                 Text(
-                    text = if (isRegisterMode) "Register" else stringResource(R.string.login_button),
+                    text = if (isRegisterMode) stringResource(R.string.register_button) else stringResource(R.string.login_button),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -315,7 +307,7 @@ private fun RegisterLink(
     ) {
         Text(
             text = if (isRegisterMode) {
-                "Already have an account? Login"
+                stringResource(R.string.already_have_account)
             } else {
                 stringResource(R.string.register_link)
             },
