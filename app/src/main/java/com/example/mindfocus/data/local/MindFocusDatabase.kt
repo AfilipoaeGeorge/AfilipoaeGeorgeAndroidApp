@@ -42,8 +42,14 @@ abstract class MindFocusDatabase : RoomDatabase() {
                     "mindfocus.db"
                 )
                     .fallbackToDestructiveMigration()
+                    .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                     .build()
-                    .also { INSTANCE = it }
+                    .also { 
+                        INSTANCE = it
+                        // force database initialization by opening it
+                        // tables are created immediately
+                        it.openHelper.writableDatabase
+                    }
             }
     }
 }
