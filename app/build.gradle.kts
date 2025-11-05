@@ -58,6 +58,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+
     //db
     implementation("androidx.room:room-runtime:2.8.3")
     implementation("androidx.room:room-ktx:2.8.3")

@@ -21,7 +21,7 @@ import com.example.mindfocus.data.local.entities.UserEntity
         SessionEntity::class,
         MetricEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

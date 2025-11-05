@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +44,7 @@ data class SessionHistoryItem(
 @Composable
 fun HistoryScreen(
     sessions: List<SessionHistoryItem>? = null,
+    onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val sessionList = sessions ?: remember { sampleSessions() }
@@ -70,12 +73,26 @@ fun HistoryScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.history_title),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorResource(R.color.amber)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IconButton(
+                        onClick = onNavigateBack
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colorResource(R.color.amber)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.history_title),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorResource(R.color.amber)
+                    )
+                }
                 
                 Text(
                     text = stringResource(R.string.sessions_count, sessionList.size),

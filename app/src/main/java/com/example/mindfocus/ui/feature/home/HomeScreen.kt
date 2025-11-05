@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mindfocus.R
 import com.example.mindfocus.core.datastore.AuthPreferencesManager
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 @Composable
@@ -33,12 +34,15 @@ fun HomeScreen(
     onCalibrationClick: () -> Unit = {},
     onStartSessionClick: () -> Unit = {},
     onHistoryClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onLogoutClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val authPreferencesManager = remember { AuthPreferencesManager(context) }
     
+    // Sample data - replace with actual data from ViewModel
     val lastFocusScore = 75
     val lastSessionDate = "2 hours ago"
     
@@ -74,18 +78,33 @@ fun HomeScreen(
                     color = colorResource(R.color.amber)
                 )
                 
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            authPreferencesManager.setLoggedOut()
-                        }
-                    }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ExitToApp,
-                        contentDescription = "Logout",
-                        tint = colorResource(R.color.amber)
-                    )
+                    IconButton(
+                        onClick = onSettingsClick
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Settings,
+                            contentDescription = "Settings",
+                            tint = colorResource(R.color.amber)
+                        )
+                    }
+                    
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                authPreferencesManager.setLoggedOut()
+                            }
+                            onLogoutClick()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ExitToApp,
+                            contentDescription = "Logout",
+                            tint = colorResource(R.color.amber)
+                        )
+                    }
                 }
             }
             

@@ -7,9 +7,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 import com.example.mindfocus.core.datastore.AuthPreferencesManager
-import com.example.mindfocus.ui.feature.home.HomeScreen
-import com.example.mindfocus.ui.feature.login.LoginScreen
+import com.example.mindfocus.navigation.MindFocusNavHost
+import com.example.mindfocus.navigation.NavRoute
 import com.example.mindfocus.ui.theme.MindFocusTheme
 
 class MainActivity : ComponentActivity() {
@@ -26,16 +28,34 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation() {
+    val navController = rememberNavController()
     val context = androidx.compose.ui.platform.LocalContext.current
     val authPreferencesManager = remember { AuthPreferencesManager(context) }
     val isLoggedIn by authPreferencesManager.isLoggedIn.collectAsState(initial = false)
     
-    if (isLoggedIn) {
-        HomeScreen(modifier = Modifier.fillMaxSize())
+    val startDestination = if (isLoggedIn) {
+        NavRoute.Home.route
     } else {
-        LoginScreen(
-            onLoginSuccess = { /* State will automatically update via Flow */ },
-            modifier = Modifier.fillMaxSize()
-        )
+        NavRoute.Login.route
     }
+    
+    LaunchedEffect(isLoggedIn) {
+        val currentRoute = navController.currentDestination?.route
+        
+        if (!isLoggedIn && currentRoute != NavRoute.Login.route) {
+            navController.navigate(NavRoute.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        } else if (isLoggedIn && currentRoute == NavRoute.Login.route) {
+            navController.navigate(NavRoute.Home.route) {
+                popUpTo(NavRoute.Login.route) { inclusive = true }
+            }
+        }
+    }
+    
+    MindFocusNavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = Modifier.fillMaxSize()
+    )
 }
