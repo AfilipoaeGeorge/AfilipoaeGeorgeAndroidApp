@@ -35,7 +35,7 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val authPreferencesManager = remember { AuthPreferencesManager(context) }
-    val database = remember { MindFocusDatabase.getInstance(context) }
+    val database = remember { MindFocusDatabase.getInstance(context.applicationContext) }
     val userRepository = remember { UserRepository(database) }
     
     val viewModel: LoginViewModel = viewModel {
