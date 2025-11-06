@@ -27,21 +27,21 @@ class CalibrationViewModel(
     private val metricsBuffer = ArrayDeque<Triple<Double, Double, Double>>()
     private val bufferSize = 60
     
-    // Metrics collection for baseline
+    // metrics collection for baseline
     private val earSamples = mutableListOf<Double>()
     private val marSamples = mutableListOf<Double>()
     private val headPoseSamples = mutableListOf<Double>()
     
-    // Blink detection
+    // blink detection
     private var blinkCount = 0
     private var lastEar: Double = 0.0
-    private val earThreshold = 0.2 // Threshold for blink detection
+    private val earThreshold = 0.18 // threshold for blink detection
     private var isBlinking = false
     
-    // Calibration duration
+    // calibration duration
     private val calibrationDurationSeconds = 60
     
-    // Repository
+    // repository
     private val baselineRepository = BaselineRepository(
         MindFocusDatabase.getInstance(context)
     )
@@ -50,7 +50,7 @@ class CalibrationViewModel(
     fun startCalibration() {
         if (_uiState.value.isRunning) return
         
-        // Reset all metrics
+        // reset all metrics
         metricsBuffer.clear()
         earSamples.clear()
         marSamples.clear()
@@ -106,22 +106,22 @@ class CalibrationViewModel(
 
         val (ear, mar, head) = FaceMetricsCalculator.calculateFromResult(result)
 
-        // Only collect metrics if calibration is running and not paused
+        // only collect metrics if calibration is running and not paused
         if (_uiState.value.isRunning && !_uiState.value.isPaused) {
             // Add to metrics buffer for averaging
             if (metricsBuffer.size >= bufferSize) metricsBuffer.removeFirst()
             metricsBuffer.addLast(Triple(ear, mar, head))
             
-            // Collect samples for baseline calculation
+            // collect samples for baseline calculation
             earSamples.add(ear)
             marSamples.add(mar)
             headPoseSamples.add(head)
             
-            // Detect blinks
+            // detect blinks
             detectBlink(ear)
         }
 
-        // Calculate averages from buffer
+        // calculate averages from buffer
         val avgEar = if (metricsBuffer.isNotEmpty()) {
             metricsBuffer.map { it.first }.average()
         } else {
@@ -167,12 +167,12 @@ class CalibrationViewModel(
     }
     
     private fun detectBlink(currentEar: Double) {
-        // Blink detection: EAR drops below threshold and then rises above it
+        // blink detection: EAR drops below threshold and then rises above it
         if (currentEar < earThreshold && !isBlinking) {
-            // Start of a blink
+            //start of a blink
             isBlinking = true
         } else if (currentEar >= earThreshold && isBlinking) {
-            // End of a blink
+            // end of a blink
             blinkCount++
             isBlinking = false
         }
@@ -189,7 +189,7 @@ class CalibrationViewModel(
                 )
                 
                 if (newTimerSeconds >= calibrationDurationSeconds) {
-                    // Timer completed, save baseline
+                    // timer completed, save baseline
                     saveBaseline()
                     _uiState.value = _uiState.value.copy(
                         isRunning = false,
@@ -211,7 +211,7 @@ class CalibrationViewModel(
                     return@launch
                 }
                 
-                // Calculate averages
+                // calculate averages
                 if (earSamples.isEmpty() || marSamples.isEmpty() || headPoseSamples.isEmpty()) {
                     _uiState.value = _uiState.value.copy(
                         errorMessage = "Insufficient data collected"
@@ -223,12 +223,12 @@ class CalibrationViewModel(
                 val marMean = marSamples.average()
                 val headPitchMeanDeg = headPoseSamples.average()
                 
-                // Calculate blinks per minute
+                //calculate blinks per minute
                 val elapsedSeconds = _uiState.value.timerSeconds
                 val actualMinutes = if (elapsedSeconds > 0) {
                     elapsedSeconds / 60.0
                 } else {
-                    1.0 // Default to 1 minute if calibration completed
+                    1.0 //dfault to 1 minute if calibration completed
                 }
                 val blinkPerMin = if (actualMinutes > 0) {
                     blinkCount / actualMinutes
@@ -236,7 +236,7 @@ class CalibrationViewModel(
                     blinkCount.toDouble()
                 }
                 
-                // Noise is not implemented yet, use default value
+                //noise is not implemented yet, use default value
                 val noiseDbMean = 0.0
                 
                 val baseline = BaselineEntity(
