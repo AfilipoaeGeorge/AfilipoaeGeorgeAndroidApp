@@ -69,6 +69,11 @@ fun MindFocusNavHost(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
+                onCalibrationComplete = {
+                    navController.navigate(NavRoute.Home.route) {
+                        popUpTo(NavRoute.Home.route) { inclusive = false }
+                    }
+                },
                 modifier = Modifier
             )
         }

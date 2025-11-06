@@ -1,5 +1,16 @@
 package com.example.mindfocus.ui.feature.calibration
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -21,20 +34,81 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
-import android.view.ViewGroup
-import android.widget.FrameLayout
+import com.example.mindfocus.core.camera.FaceLandmarkerHelper
+import com.example.mindfocus.core.camera.getCameraProvider
+import com.example.mindfocus.ui.feature.session.components.CameraPermission
+import com.example.mindfocus.ui.feature.session.components.OverlayCamera
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
+import kotlinx.coroutines.launch
+import java.util.concurrent.Executors
+import android.os.Handler
+import android.os.Looper
+import androidx.lifecycle.Lifecycle
+import kotlin.math.max
 
 @Composable
 fun CalibrationScreen(
     onStopClick: () -> Unit = {},
     onPauseResumeClick: () -> Unit = {},
     onNavigateBack: () -> Unit = {},
+    onCalibrationComplete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val viewModel: CalibrationViewModel = viewModel()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    
+    val viewModel: CalibrationViewModel = viewModel {
+        CalibrationViewModel(context)
+    }
     val uiState by viewModel.uiState.collectAsState()
+    
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+    }
+    
+    val faceImage = remember { mutableStateOf<MPImage?>(null) }
+    val faceResult = remember { mutableStateOf<FaceLandmarkerResult?>(null) }
+    
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    
+    val faceHelper = remember {
+        FaceLandmarkerHelper(
+            context,
+            faceLandmarkErrorListener = { error ->
+                mainHandler.post {
+                    android.util.Log.e("CalibrationScreen", "Face landmark error: ${error.message}", error)
+                }
+            },
+            faceLandmarkResultListener = { result, image ->
+                mainHandler.post {
+                    try {
+                        faceImage.value = image
+                        faceResult.value = result
+                        viewModel.updateFaceMetrics(result)
+                    } catch (e: Exception) {
+                        android.util.Log.e("CalibrationScreen", "Error updating UI: ${e.message}", e)
+                    }
+                }
+            }
+        )
+    }
+    
+    val cameraExecutor = remember { Executors.newSingleThreadScheduledExecutor() }
     
     // Auto-start calibration when screen opens
     LaunchedEffect(Unit) {
@@ -43,11 +117,84 @@ fun CalibrationScreen(
         }
     }
     
-    // Sample metrics - replace with actual camera data
-    LaunchedEffect(uiState.isRunning, uiState.isPaused) {
-        if (uiState.isRunning && !uiState.isPaused) {
-            // Simulate metrics updates (replace with actual camera analysis)
-            // viewModel.updateMetrics(ear, mar, headPose, focusScore)
+    // Handle calibration completion
+    LaunchedEffect(uiState.isCompleted) {
+        if (uiState.isCompleted) {
+            onCalibrationComplete()
+        }
+    }
+    
+    // Handle errors
+    LaunchedEffect(uiState.errorMessage) {
+        if (uiState.errorMessage != null) {
+            android.util.Log.e("CalibrationScreen", "Error: ${uiState.errorMessage}")
+        }
+    }
+    
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_DESTROY) {
+                lifecycleOwner.lifecycleScope.launch {
+                    cameraExecutor.shutdown()
+                    val provider = context.getCameraProvider()
+                    provider.unbindAll()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            cameraExecutor.shutdown()
+            faceHelper.clearFaceLandmarker()
+        }
+    }
+    
+    val previewView = remember {
+        PreviewView(context).apply {
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            scaleType = PreviewView.ScaleType.FILL_CENTER
+        }
+    }
+    
+    val preview = Preview.Builder()
+        .build()
+    
+    val imageAnalysis = ImageAnalysis.Builder()
+        .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+        .setTargetResolution(android.util.Size(640, 480))
+        .build()
+    
+    LaunchedEffect(hasCameraPermission) {
+        if (!hasCameraPermission) {
+            viewModel.pause()
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        } else {
+            viewModel.resume()
+            val selector = CameraSelector.Builder()
+                .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
+                .build()
+            
+            val provider = context.getCameraProvider()
+            provider.unbindAll()
+            provider.bindToLifecycle(lifecycleOwner, selector, preview, imageAnalysis)
+            preview.setSurfaceProvider(previewView.surfaceProvider)
+            
+            if (!uiState.isPaused) {
+                setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper)
+            }
+        }
+    }
+    
+    LaunchedEffect(uiState.isPaused, hasCameraPermission) {
+        if (hasCameraPermission) {
+            if (!uiState.isPaused) {
+                setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper)
+            } else {
+                imageAnalysis.setAnalyzer(cameraExecutor) { image ->
+                    image.close()
+                }
+            }
         }
     }
     
@@ -109,36 +256,50 @@ fun CalibrationScreen(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-
+                Box(modifier = Modifier.fillMaxSize()) {
                     AndroidView(
-                        factory = { context ->
-                            FrameLayout(context).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                setBackgroundColor(android.graphics.Color.DKGRAY)
-                            }
-                        },
+                        factory = { previewView },
                         modifier = Modifier.fillMaxSize()
                     )
                     
-                    Text(
-                        text = stringResource(R.string.facial_landmarks_overlay),
-                        fontSize = 16.sp,
-                        color = colorResource(R.color.amber),
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Medium
-                    )
+                    if (!hasCameraPermission) {
+                        CameraPermission(
+                            onOpenSettings = {
+                                val intent = Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.fromParts("package", context.packageName, null)
+                                )
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.matchParentSize()
+                        )
+                    } else if (!uiState.isPaused && faceImage.value != null && faceResult.value != null) {
+                        val imageWidth = faceImage.value?.width ?: 0
+                        val imageHeight = faceImage.value?.height ?: 0
+                        
+                        var overlaySize by remember { mutableStateOf(android.util.Size(0, 0)) }
+                        
+                        val scaleFactor = if (imageWidth > 0 && imageHeight > 0 && overlaySize.width > 0 && overlaySize.height > 0) {
+                            max(overlaySize.width * 1f / imageWidth, overlaySize.height * 1f / imageHeight)
+                        } else 1f
+                        
+                        OverlayCamera(
+                            faceResult = faceResult.value,
+                            imageWidth = imageWidth,
+                            imageHeight = imageHeight,
+                            scaleFactor = scaleFactor,
+                            modifier = Modifier
+                                .matchParentSize()
+                                .onSizeChanged { size ->
+                                    overlaySize = android.util.Size(size.width, size.height)
+                                }
+                        )
+                    }
                 }
             }
             
             FocusScoreCard(
-                score = uiState.focusScore,
+                score = uiState.focusScore.toInt(),
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -158,13 +319,13 @@ fun CalibrationScreen(
                 )
                 MetricCard(
                     label = stringResource(R.string.head_pose_label),
-                    value = uiState.headPose,
+                    value = String.format("%.1f°", uiState.headPose),
                     modifier = Modifier.weight(1f)
                 )
             }
             
             TimerCard(
-                remainingSeconds = uiState.remainingTime,
+                remainingSeconds = 60 - uiState.timerSeconds,
                 modifier = Modifier.fillMaxWidth()
             )
             
@@ -365,6 +526,26 @@ private fun TimerCard(
                 fontWeight = FontWeight.Bold,
                 color = colorResource(R.color.amber)
             )
+        }
+    }
+}
+
+private fun setImageAnalyzer(
+    imageAnalysis: ImageAnalysis,
+    cameraExecutor: java.util.concurrent.ExecutorService,
+    faceLandmarkerHelper: FaceLandmarkerHelper
+) {
+    imageAnalysis.setAnalyzer(cameraExecutor) { image ->
+        try {
+            faceLandmarkerHelper.detect(image, true) // Always use front camera for calibration
+        } catch (e: Exception) {
+            android.util.Log.e("ImageAnalysis", "Error processing image: ${e.message}", e)
+        } finally {
+            try {
+                image.close()
+            } catch (e: Exception) {
+                android.util.Log.e("ImageAnalysis", "Error closing image: ${e.message}", e)
+            }
         }
     }
 }
