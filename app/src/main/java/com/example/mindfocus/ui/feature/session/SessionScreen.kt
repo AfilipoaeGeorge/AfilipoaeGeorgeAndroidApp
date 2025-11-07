@@ -44,6 +44,11 @@ import com.example.mindfocus.R
 import com.example.mindfocus.core.camera.FaceLandmarkerHelper
 import com.example.mindfocus.core.camera.getCameraProvider
 import com.example.mindfocus.core.vibration.VibrationHelper
+import com.example.mindfocus.core.datastore.AuthPreferencesManager
+import com.example.mindfocus.data.local.MindFocusDatabase
+import com.example.mindfocus.data.repository.BaselineRepository
+import com.example.mindfocus.data.repository.MetricRepository
+import com.example.mindfocus.data.repository.SessionRepository
 import com.example.mindfocus.ui.feature.session.components.CameraPermission
 import com.example.mindfocus.ui.feature.session.components.OverlayCamera
 import com.google.mediapipe.framework.image.MPImage
@@ -62,7 +67,22 @@ fun SessionScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val viewModel: SessionViewModel = viewModel()
+    
+    val authPreferencesManager = remember { AuthPreferencesManager(context) }
+    val database = remember { MindFocusDatabase.getInstance(context.applicationContext) }
+    val sessionRepository = remember { SessionRepository(database) }
+    val metricRepository = remember { MetricRepository(database) }
+    val baselineRepository = remember { BaselineRepository(database) }
+    
+    val viewModel: SessionViewModel = viewModel {
+        SessionViewModel(
+            context = context,
+            authPreferencesManager = authPreferencesManager,
+            sessionRepository = sessionRepository,
+            metricRepository = metricRepository,
+            baselineRepository = baselineRepository
+        )
+    }
     val uiState by viewModel.uiState.collectAsState()
     
     var hasCameraPermission by remember {

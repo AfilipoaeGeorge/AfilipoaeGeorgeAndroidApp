@@ -27,6 +27,5 @@ data class MetricEntity(
     val focusScore: Double,
     val ear: Double,
     val mar: Double,
-    val headPitchDeg: Double,
-    val noiseDb: Double
+    val headPitchDeg: Double
 )
