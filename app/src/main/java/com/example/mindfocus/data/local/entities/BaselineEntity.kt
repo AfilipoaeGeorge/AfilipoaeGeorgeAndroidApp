@@ -24,6 +24,5 @@ data class BaselineEntity(
     val marMean: Double,
     val headPitchMeanDeg: Double,
     val blinkPerMin: Double,
-    val noiseDbMean: Double,
     val createdAtEpochMs: Long = System.currentTimeMillis()
 )

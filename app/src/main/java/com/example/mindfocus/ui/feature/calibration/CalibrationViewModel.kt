@@ -236,16 +236,12 @@ class CalibrationViewModel(
                     blinkCount.toDouble()
                 }
                 
-                //noise is not implemented yet, use default value
-                val noiseDbMean = 0.0
-                
                 val baseline = BaselineEntity(
                     userId = userId,
                     earMean = earMean,
                     marMean = marMean,
                     headPitchMeanDeg = headPitchMeanDeg,
-                    blinkPerMin = blinkPerMin,
-                    noiseDbMean = noiseDbMean
+                    blinkPerMin = blinkPerMin
                 )
                 
                 baselineRepository.upsert(baseline)

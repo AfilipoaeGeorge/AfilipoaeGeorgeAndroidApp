@@ -15,9 +15,8 @@ class SessionRepository(private val db: MindFocusDatabase) {
         focusAvg: Double?,
         earAvg: Double?,
         marAvg: Double?,
-        headPitchAvgDegrees: Double?,
-        noiseDbAvg: Double?
-    ) = db.sessionDao().closeSession(id, endMs, breaks, focusAvg, earAvg, marAvg, headPitchAvgDegrees, noiseDbAvg)
+        headPitchAvgDegrees: Double?
+    ) = db.sessionDao().closeSession(id, endMs, breaks, focusAvg, earAvg, marAvg, headPitchAvgDegrees)
 
     fun observeForUser(userId: Long): Flow<List<SessionEntity>> =
         db.sessionDao().observeForUser(userId)

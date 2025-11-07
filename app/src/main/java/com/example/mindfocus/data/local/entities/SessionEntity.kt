@@ -23,10 +23,8 @@ data class SessionEntity(
     val startedAtEpochMs: Long,
     val endedAtEpochMs: Long? = null,
     val breaksCount: Int = 0,
-    val headphones: Boolean = false,
     val focusAvg: Double? = null,
     val earAvg: Double? = null,
     val marAvg: Double? = null,
-    val headPitchAvgDegrees: Double? = null,
-    val noiseDbAvg: Double? = null
+    val headPitchAvgDegrees: Double? = null
 )
