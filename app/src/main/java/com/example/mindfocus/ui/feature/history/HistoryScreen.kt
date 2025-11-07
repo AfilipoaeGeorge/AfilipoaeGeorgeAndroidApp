@@ -12,14 +12,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
+import com.example.mindfocus.core.datastore.AuthPreferencesManager
+import com.example.mindfocus.data.local.MindFocusDatabase
+import com.example.mindfocus.data.repository.MetricRepository
+import com.example.mindfocus.data.repository.SessionRepository
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -43,11 +48,28 @@ data class SessionHistoryItem(
 
 @Composable
 fun HistoryScreen(
-    sessions: List<SessionHistoryItem>? = null,
     onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val sessionList = sessions ?: remember { sampleSessions() }
+    val context = LocalContext.current
+    
+    val authPreferencesManager = remember { AuthPreferencesManager(context) }
+    val database = remember { MindFocusDatabase.getInstance(context.applicationContext) }
+    val sessionRepository = remember { SessionRepository(database) }
+    val metricRepository = remember { MetricRepository(database) }
+    
+    val viewModel: HistoryViewModel = viewModel {
+        HistoryViewModel(
+            context = context,
+            authPreferencesManager = authPreferencesManager,
+            sessionRepository = sessionRepository,
+            metricRepository = metricRepository
+        )
+    }
+    
+    val uiState by viewModel.uiState.collectAsState()
+    val sessionList = uiState.sessions
+    val errorMessage = uiState.errorMessage
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -103,7 +125,51 @@ fun HistoryScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            if (sessionList.isEmpty()) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = colorResource(R.color.amber)
+                    )
+                }
+            } else if (errorMessage != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Error",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorResource(R.color.coralred)
+                        )
+                        Text(
+                            text = errorMessage,
+                            fontSize = 14.sp,
+                            color = colorResource(R.color.lightsteelblue),
+                            textAlign = TextAlign.Center
+                        )
+                        Button(
+                            onClick = { viewModel.refresh() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorResource(R.color.amber)
+                            )
+                        ) {
+                            Text("Retry")
+                        }
+                    }
+                }
+            } else if (sessionList.isEmpty()) {
                 EmptyHistoryState(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -431,46 +497,3 @@ private fun EmptyHistoryState(
         )
     }
 }
-
-private fun sampleSessions(): List<SessionHistoryItem> {
-    val now = System.currentTimeMillis()
-    return listOf(
-        SessionHistoryItem(
-            id = 1,
-            sessionNumber = 1,
-            startTime = now - 86400000,
-            endTime = now - 86340000,
-            duration = 600,
-            focusScore = 85,
-            ear = 0.32,
-            mar = 0.38,
-            headPose = 2.5,
-            scoreEvolution = listOf(70, 75, 80, 85, 88, 85, 87, 90, 85, 82)
-        ),
-        SessionHistoryItem(
-            id = 2,
-            sessionNumber = 2,
-            startTime = now - 172800000,
-            endTime = now - 172740000,
-            duration = 600,
-            focusScore = 72,
-            ear = 0.28,
-            mar = 0.45,
-            headPose = 5.0,
-            scoreEvolution = listOf(60, 65, 70, 72, 75, 70, 68, 72, 75, 72)
-        ),
-        SessionHistoryItem(
-            id = 3,
-            sessionNumber = 3,
-            startTime = now - 259200000,
-            endTime = now - 259140000,
-            duration = 600,
-            focusScore = 68,
-            ear = 0.25,
-            mar = 0.50,
-            headPose = 7.5,
-            scoreEvolution = listOf(55, 60, 65, 68, 70, 65, 68, 70, 65, 68)
-        )
-    )
-}
-
