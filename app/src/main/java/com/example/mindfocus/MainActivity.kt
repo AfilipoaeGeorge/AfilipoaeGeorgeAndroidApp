@@ -42,13 +42,19 @@ fun AppNavigation() {
     LaunchedEffect(isLoggedIn) {
         val currentRoute = navController.currentDestination?.route
         
-        if (!isLoggedIn && currentRoute != NavRoute.Login.route) {
-            navController.navigate(NavRoute.Login.route) {
-                popUpTo(0) { inclusive = true }
+        if (!isLoggedIn) {
+            // user logged out - go to login
+            if (currentRoute != NavRoute.Login.route) {
+                navController.navigate(NavRoute.Login.route) {
+                    popUpTo(0) { inclusive = true }
+                }
             }
-        } else if (isLoggedIn && currentRoute == NavRoute.Login.route) {
-            navController.navigate(NavRoute.Home.route) {
-                popUpTo(NavRoute.Login.route) { inclusive = true }
+        } else {
+            // user logged in - only navigate if on login screen
+            if (currentRoute == NavRoute.Login.route) {
+                navController.navigate(NavRoute.Home.route) {
+                    popUpTo(NavRoute.Login.route) { inclusive = true }
+                }
             }
         }
     }

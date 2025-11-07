@@ -100,7 +100,6 @@ fun MindFocusNavHost(
         
         composable(route = NavRoute.History.route) {
             HistoryScreen(
-                sessions = null,
                 onNavigateBack = {
                     navController.popBackStack()
                 },
