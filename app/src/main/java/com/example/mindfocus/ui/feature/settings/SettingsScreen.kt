@@ -1,26 +1,45 @@
 package com.example.mindfocus.ui.feature.settings
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Help
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
+import com.example.mindfocus.core.datastore.SettingsPreferencesManager
+import com.example.mindfocus.data.local.MindFocusDatabase
+import com.example.mindfocus.data.repository.SettingsRepository
 
 data class SettingsSection(
     val title: String,
@@ -34,7 +53,8 @@ data class SettingsItem(
     val icon: ImageVector? = null,
     val isSwitch: Boolean = false,
     val isEnabled: Boolean = false,
-    val onClick: () -> Unit = {}
+    val onClick: () -> Unit = {},
+    val onCheckedChange: (Boolean) -> Unit = {}
 )
 
 @Composable
@@ -42,169 +62,256 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var cameraMonitoringEnabled by remember { mutableStateOf(true) }
-    var autoDndEnabled by remember { mutableStateOf(true) }
-    var lowFocusAlertsEnabled by remember { mutableStateOf(true) }
-    var dailyRemindersEnabled by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val settingsPreferencesManager = remember { SettingsPreferencesManager(context) }
+    val database = remember { MindFocusDatabase.getInstance(context.applicationContext) }
+    val settingsRepository = remember { SettingsRepository(settingsPreferencesManager, database) }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        colorResource(R.color.darkcharcoal),
-                        colorResource(R.color.darkslategray)
-                    )
+    val viewModel: SettingsViewModel = viewModel {
+        SettingsViewModel(
+            context = context.applicationContext,
+            settingsRepository = settingsRepository
+        )
+    }
+
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            viewModel.onCameraPermissionDenied()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is SettingsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is SettingsEvent.OpenUrl -> openExternalUrl(
+                    context = context,
+                    url = event.url,
+                    snackbarHostState = snackbarHostState
                 )
-            )
-    ) {
-        Column(
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        containerColor = colorResource(R.color.darkcharcoal)
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(innerPadding)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            colorResource(R.color.darkcharcoal),
+                            colorResource(R.color.darkslategray)
+                        )
+                    )
+                )
         ) {
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = onNavigateBack
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = colorResource(R.color.amber)
+                        IconButton(
+                            onClick = onNavigateBack
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = colorResource(R.color.amber)
+                            )
+                        }
+                        Text(
+                            text = stringResource(R.string.settings_title),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorResource(R.color.amber)
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = colorResource(R.color.amber))
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        val settings = uiState.settings
+
+                        item {
+                            SettingsSectionCard(
+                                section = SettingsSection(
+                                    title = stringResource(R.string.settings_camera),
+                                    icon = Icons.Outlined.CameraAlt,
+                                    items = listOf(
+                                        SettingsItem(
+                                            title = stringResource(R.string.enable_camera_monitoring),
+                                            isSwitch = true,
+                                            isEnabled = settings.cameraMonitoringEnabled,
+                                            onCheckedChange = { checked ->
+                                                viewModel.onCameraMonitoringChanged(checked)
+                                                if (checked) {
+                                                    val granted = ContextCompat.checkSelfPermission(
+                                                        context,
+                                                        Manifest.permission.CAMERA
+                                                    ) == PackageManager.PERMISSION_GRANTED
+                                                    if (!granted) {
+                                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    )
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        item {
+                            SettingsSectionCard(
+                                section = SettingsSection(
+                                    title = stringResource(R.string.settings_notifications),
+                                    icon = Icons.Outlined.Notifications,
+                                    items = listOf(
+                                        SettingsItem(
+                                            title = stringResource(R.string.eyes_closed_alerts),
+                                            isSwitch = true,
+                                            isEnabled = settings.eyesClosedAlertsEnabled,
+                                            onCheckedChange = viewModel::onEyesClosedAlertsChanged
+                                        ),
+                                        SettingsItem(
+                                            title = stringResource(R.string.blink_alerts),
+                                            isSwitch = true,
+                                            isEnabled = settings.blinkAlertsEnabled,
+                                            onCheckedChange = viewModel::onBlinkAlertsChanged
+                                        ),
+                                        SettingsItem(
+                                            title = stringResource(R.string.head_pose_alerts),
+                                            isSwitch = true,
+                                            isEnabled = settings.headPoseAlertsEnabled,
+                                            onCheckedChange = viewModel::onHeadPoseAlertsChanged
+                                        ),
+                                        SettingsItem(
+                                            title = stringResource(R.string.yawn_alerts),
+                                            isSwitch = true,
+                                            isEnabled = settings.yawnAlertsEnabled,
+                                            onCheckedChange = viewModel::onYawnAlertsChanged
+                                        ),
+                                        SettingsItem(
+                                            title = stringResource(R.string.face_lost_alerts),
+                                            isSwitch = true,
+                                            isEnabled = settings.faceLostAlertsEnabled,
+                                            onCheckedChange = viewModel::onFaceLostAlertsChanged
+                                        ),
+                                        SettingsItem(
+                                            title = stringResource(R.string.low_focus_alerts),
+                                            isSwitch = true,
+                                            isEnabled = settings.lowFocusAlertsEnabled,
+                                            onCheckedChange = viewModel::onLowFocusAlertsChanged
+                                        )
+                                    )
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        item {
+                            SettingsSectionCard(
+                                section = SettingsSection(
+                                    title = stringResource(R.string.settings_privacy),
+                                    icon = Icons.Outlined.Lock,
+                                    items = listOf(
+                                        SettingsItem(
+                                            title = stringResource(R.string.privacy_policy),
+                                            icon = Icons.Outlined.Info,
+                                            onClick = viewModel::onPrivacyPolicyClicked
+                                        ),
+                                        SettingsItem(
+                                            title = stringResource(R.string.delete_all_data),
+                                            icon = Icons.Outlined.Delete,
+                                            onClick = viewModel::onDeleteAllDataClicked
+                                        )
+                                    )
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        item {
+                            SettingsSectionCard(
+                                section = SettingsSection(
+                                    title = stringResource(R.string.settings_about),
+                                    icon = Icons.Outlined.Info,
+                                    items = listOf(
+                                        SettingsItem(
+                                            title = stringResource(R.string.app_version),
+                                            description = stringResource(
+                                                R.string.app_version_label,
+                                                uiState.appVersion
+                                            ),
+                                            icon = Icons.Outlined.Apps
+                                        ),
+                                        SettingsItem(
+                                            title = stringResource(R.string.help_and_support),
+                                            icon = Icons.Outlined.Help,
+                                            onClick = viewModel::onHelpAndSupportClicked
+                                        )
+                                    )
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+
+                uiState.errorMessage?.let { errorMessage ->
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = stringResource(R.string.settings_title),
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colorResource(R.color.amber)
+                        text = errorMessage,
+                        color = colorResource(R.color.coralred),
+                        fontSize = 12.sp
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                item {
-                    SettingsSectionCard(
-                        section = SettingsSection(
-                            title = stringResource(R.string.settings_camera),
-                            icon = Icons.Outlined.CameraAlt,
-                            items = listOf(
-                                SettingsItem(
-                                    title = stringResource(R.string.enable_camera_monitoring),
-                                    isSwitch = true,
-                                    isEnabled = cameraMonitoringEnabled,
-                                    onClick = { cameraMonitoringEnabled = !cameraMonitoringEnabled }
-                                )
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
-                item {
-                    SettingsSectionCard(
-                        section = SettingsSection(
-                            title = stringResource(R.string.settings_dnd),
-                            icon = Icons.Outlined.NotificationsOff,
-                            items = listOf(
-                                SettingsItem(
-                                    title = stringResource(R.string.auto_enable_dnd),
-                                    isSwitch = true,
-                                    isEnabled = autoDndEnabled,
-                                    onClick = { autoDndEnabled = !autoDndEnabled }
-                                )
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
-                item {
-                    SettingsSectionCard(
-                        section = SettingsSection(
-                            title = stringResource(R.string.settings_notifications),
-                            icon = Icons.Outlined.Notifications,
-                            items = listOf(
-                                SettingsItem(
-                                    title = stringResource(R.string.low_focus_alerts),
-                                    isSwitch = true,
-                                    isEnabled = lowFocusAlertsEnabled,
-                                    onClick = { lowFocusAlertsEnabled = !lowFocusAlertsEnabled }
-                                ),
-                                SettingsItem(
-                                    title = stringResource(R.string.daily_reminders),
-                                    isSwitch = true,
-                                    isEnabled = dailyRemindersEnabled,
-                                    onClick = { dailyRemindersEnabled = !dailyRemindersEnabled }
-                                )
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
 
-                
-                item {
-                    SettingsSectionCard(
-                        section = SettingsSection(
-                            title = stringResource(R.string.settings_privacy),
-                            icon = Icons.Outlined.Lock,
-                            items = listOf(
-                                SettingsItem(
-                                    title = stringResource(R.string.privacy_policy),
-                                    icon = Icons.Outlined.Info,
-                                    onClick = { /* Navigate to privacy policy */ }
-                                ),
-                                SettingsItem(
-                                    title = stringResource(R.string.delete_all_data),
-                                    icon = Icons.Outlined.Delete,
-                                    onClick = { /* Show delete confirmation */ }
-                                )
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                
-                item {
-                    SettingsSectionCard(
-                        section = SettingsSection(
-                            title = stringResource(R.string.settings_about),
-                            icon = Icons.Outlined.Info,
-                            items = listOf(
-                                SettingsItem(
-                                    title = stringResource(R.string.app_version),
-                                    description = stringResource(R.string.app_description),
-                                    icon = Icons.Outlined.Apps
-                                ),
-                                SettingsItem(
-                                    title = stringResource(R.string.help_and_support),
-                                    icon = Icons.Outlined.Help,
-                                    onClick = { /* Navigate to help */ }
-                                )
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+            if (uiState.showDeleteConfirmation) {
+                DeleteConfirmationDialog(
+                    isLoading = uiState.isDeletingData,
+                    onDismiss = viewModel::onDismissDeleteDialog,
+                    onConfirm = viewModel::onConfirmDelete
+                )
             }
         }
     }
@@ -274,7 +381,13 @@ private fun SettingsItemRow(
 ) {
     Row(
         modifier = modifier
-            .clickable(enabled = !item.isSwitch) { item.onClick() }
+            .clickable {
+                if (item.isSwitch) {
+                    item.onCheckedChange(!item.isEnabled)
+                } else {
+                    item.onClick()
+                }
+            }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -316,7 +429,7 @@ private fun SettingsItemRow(
         if (item.isSwitch) {
             Switch(
                 checked = item.isEnabled,
-                onCheckedChange = { item.onClick() },
+                onCheckedChange = { checked -> item.onCheckedChange(checked) },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = colorResource(R.color.amber),
                     checkedTrackColor = colorResource(R.color.amber).copy(alpha = 0.5f),
@@ -325,6 +438,80 @@ private fun SettingsItemRow(
                 )
             )
         }
+    }
+}
+
+@Composable
+private fun DeleteConfirmationDialog(
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = colorResource(R.color.amber),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                TextButton(onClick = onConfirm) {
+                    Text(
+                        text = stringResource(R.string.settings_delete_confirm),
+                        color = colorResource(R.color.coralred)
+                    )
+                }
+            }
+        },
+        dismissButton = {
+            if (!isLoading) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text = stringResource(R.string.settings_delete_cancel),
+                        color = colorResource(R.color.lightsteelblue)
+                    )
+                }
+            }
+        },
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.Warning,
+                contentDescription = null,
+                tint = colorResource(R.color.coralred)
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.settings_delete_confirmation_title),
+                color = colorResource(R.color.amber)
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.settings_delete_confirmation_message),
+                color = colorResource(R.color.lightsteelblue)
+            )
+        },
+        containerColor = colorResource(R.color.midnightblue)
+    )
+}
+
+private suspend fun openExternalUrl(
+    context: android.content.Context,
+    url: String,
+    snackbarHostState: SnackbarHostState
+) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        snackbarHostState.showSnackbar(
+            context.getString(R.string.settings_no_app_found)
+        )
     }
 }
 

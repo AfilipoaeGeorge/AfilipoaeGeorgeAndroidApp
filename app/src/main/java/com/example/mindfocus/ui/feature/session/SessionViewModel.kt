@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mindfocus.core.datastore.AuthPreferencesManager
+import com.example.mindfocus.core.datastore.SettingsPreferencesManager
+import com.example.mindfocus.core.datastore.UserSettings
 import com.example.mindfocus.core.face.FaceMetricsCalculator
 import com.example.mindfocus.data.local.entities.BaselineEntity
 import com.example.mindfocus.data.local.entities.MetricEntity
@@ -18,13 +20,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
+import com.example.mindfocus.R
 
 class SessionViewModel(
     private val context: Context,
     private val authPreferencesManager: AuthPreferencesManager,
     private val sessionRepository: SessionRepository,
     private val metricRepository: MetricRepository,
-    private val baselineRepository: BaselineRepository
+    private val baselineRepository: BaselineRepository,
+    private val settingsPreferencesManager: SettingsPreferencesManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SessionUiState())
@@ -41,15 +46,10 @@ class SessionViewModel(
     private var sessionStartTime: Long = 0L
     private var baseline: BaselineEntity? = null
     
-    //metrics accumulation for periodic saving
     private val accumulatedMetrics = mutableListOf<MetricEntity>()
-    //data class for metric values
     private data class MetricValues(val focus: Double, val ear: Double, val mar: Double, val head: Double)
-    private val metricsPerBucket = mutableMapOf<Int, MutableList<MetricValues>>() // bucketSec -> list of metric values
+    private val metricsPerBucket = mutableMapOf<Int, MutableList<MetricValues>>()
     private var lastSaveTime: Long = 0L
-    //save every 30 seconds to reduce database size
-    //2-hour session: 7200 seconds / 30 = 240 records
-    //1-hour session: 3600 seconds / 30 = 120 records
     private val saveIntervalSeconds = 30L
     private var currentBucketSec = 0
     private var breaksCount = 0
@@ -60,8 +60,37 @@ class SessionViewModel(
     private val sessionMarValues = mutableListOf<Double>()
     private val sessionHeadPoseValues = mutableListOf<Double>()
 
+    private var userSettings: UserSettings = UserSettings()
+
+    private val activeAlerts = mutableMapOf<SessionAlertType, SessionAlert>()
+    private var earClosedStartTime: Long? = null
+    private var blinkInProgress = false
+    private val blinkTimestamps = ArrayDeque<Long>()
+    private var lastBlinkTimestamp: Long? = null
+    private var headDeviationStartTime: Long? = null
+    private var lowFocusStartTime: Long? = null
+    private var faceLostStartTime: Long? = null
+    private var yawnInProgress = false
+    private val yawnTimestamps = ArrayDeque<Long>()
+    private var isUserPaused = false
     init {
         loadBaselineAndStartSession()
+        observeSettings()
+    }
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            settingsPreferencesManager.settings.collect { settings ->
+                val previousSettings = userSettings
+                userSettings = settings
+                _uiState.update {
+                    it.copy(
+                        cameraMonitoringEnabled = settings.cameraMonitoringEnabled
+                    )
+                }
+                handleAlertSettingChanges(previousSettings, settings)
+            }
+        }
     }
 
     private fun loadBaselineAndStartSession() {
@@ -92,6 +121,12 @@ class SessionViewModel(
     }
 
     fun startSession() {
+        isUserPaused = false
+        setAutoPaused(false)
+        activeAlerts.clear()
+        publishAlerts()
+        clearContinuousTracking()
+        lastBlinkTimestamp = System.currentTimeMillis()
         startTimer()
         startPeriodicMetricSaving()
         _uiState.value = _uiState.value.copy(isPaused = false, isRunning = true)
@@ -128,7 +163,6 @@ class SessionViewModel(
         if (currentSessionId == null) return
         
         try {
-            // convert metricsPerBucket to MetricEntity list, averaging values within each bucket
             val metricsToSave = mutableListOf<MetricEntity>()
             
             metricsPerBucket.forEach { (bucketSec, values) ->
@@ -165,11 +199,29 @@ class SessionViewModel(
 
     fun updateFaceMetrics(result: FaceLandmarkerResult?) {
         val currentState = _uiState.value
-        if (currentState.isPaused) {
+        val isManualPause = currentState.isPaused && !currentState.isAutoPaused
+
+        if (!userSettings.cameraMonitoringEnabled) {
+            resetTrackingForMonitoringDisabled()
             return
         }
 
+        val now = System.currentTimeMillis()
+
         if (result == null || result.faceLandmarks().isEmpty()) {
+            if (isManualPause) {
+                updateAlertStates(
+                    ear = null,
+                    mar = null,
+                    head = null,
+                    focusScore = currentState.focusScore,
+                    faceDetected = false,
+                    now = now,
+                    allowUserAlerts = false
+                )
+                return
+            }
+
             val currentScore = currentState.focusScore
             val decayed = (currentScore - 2).coerceAtLeast(0.0)
 
@@ -177,58 +229,68 @@ class SessionViewModel(
                 faceDetected = false,
                 focusScore = decayed
             )
+
+            updateAlertStates(
+                ear = null,
+                mar = null,
+                head = null,
+                focusScore = decayed,
+                faceDetected = false,
+                now = now
+            )
             return
         }
 
-        val (ear, mar, head) = FaceMetricsCalculator.calculateFromResult(result)
+        if (isManualPause) {
+            updateAlertStates(
+                ear = null,
+                mar = null,
+                head = null,
+                focusScore = currentState.focusScore,
+                faceDetected = true,
+                now = now,
+                allowUserAlerts = false
+            )
+            return
+        }
 
         if (metricsBuffer.size >= bufferSize) metricsBuffer.removeFirst()
+
+        val (ear, mar, head) = FaceMetricsCalculator.calculateFromResult(result)
         metricsBuffer.addLast(Triple(ear, mar, head))
 
         val avgEar = metricsBuffer.map { it.first }.average()
         val avgMar = metricsBuffer.map { it.second }.average()
         val avgHead = metricsBuffer.map { it.third }.average()
 
-        //use baseline values if available, otherwise use defaults
-        val earRef = baseline?.earMean ?: 0.25
+        val earRef = (baseline?.earMean ?: 0.25).takeIf { it > 0 } ?: 0.25
         val marRef = baseline?.marMean ?: 0.01
         val headRef = baseline?.headPitchMeanDeg ?: 0.0
-        
+
         val w1 = 0.5
         val w2 = 0.2
         val w3 = 0.3
 
-        //normalize based on baseline: if user has smaller eyes naturally, don't penalize them
-        //use a relative approach: compare current value to baseline
-        val earNorm = if (earRef > 0) {
-            //if current EAR is close to or above baseline, normalize positively
-            val relativeEar = avgEar / earRef
-            relativeEar.coerceIn(0.0, 1.0)
-        } else {
-            (avgEar / 0.25).coerceIn(0.0, 1.0)
-        }
-        
+        val earNorm = (avgEar / earRef).coerceIn(0.0, 1.0)
+
         val marNorm = if (avgMar <= marRef) {
             1.0
         } else {
-            //MAR should be low, so if it's higher than baseline, penalize more gradually
             val maxMar = 0.5
-            val adjustedMarRef = marRef + (maxMar - marRef) * 0.3 // Allow some tolerance
+            val adjustedMarRef = marRef + (maxMar - marRef) * 0.3
             if (avgMar <= adjustedMarRef) {
                 1.0 - ((avgMar - marRef) / (adjustedMarRef - marRef)) * 0.5
             } else {
                 ((maxMar - avgMar) / (maxMar - adjustedMarRef)).coerceIn(0.0, 0.5)
             }
         }
-        
-        //head pose: compare deviation from baseline
+
         val headDeviation = kotlin.math.abs(avgHead - headRef)
         val headNorm = (1 - (headDeviation / 45.0)).coerceIn(0.0, 1.0)
 
         val focusScore = (w1 * earNorm + w2 * marNorm + w3 * headNorm).coerceIn(0.0, 1.0) * 100
         val displayMar = avgMar
 
-        //accumulate values for session averages
         if (!_uiState.value.isPaused) {
             sessionFocusScores.add(focusScore)
             sessionEarValues.add(avgEar)
@@ -244,9 +306,15 @@ class SessionViewModel(
             faceDetected = true
         )
 
-        checkFocusAlert(focusScore)
-        
-        // accumulate metric for periodic saving (only when not paused)
+        updateAlertStates(
+            ear = avgEar,
+            mar = avgMar,
+            head = avgHead,
+            focusScore = focusScore,
+            faceDetected = true,
+            now = now
+        )
+
         if (!_uiState.value.isPaused && currentSessionId != null) {
             accumulateMetric(focusScore, avgEar, avgMar, avgHead)
         }
@@ -256,17 +324,13 @@ class SessionViewModel(
         val now = System.currentTimeMillis()
         val elapsedSeconds = ((now - sessionStartTime) / 1000).toInt()
         
-        // create metric for current time bucket
-        // each bucket represents a time period (e.g., every 15 seconds)
         val bucketSec = (elapsedSeconds / saveIntervalSeconds.toInt()) * saveIntervalSeconds.toInt()
         
-        // add to bucket for averaging later
         if (!metricsPerBucket.containsKey(bucketSec)) {
             metricsPerBucket[bucketSec] = mutableListOf()
         }
         metricsPerBucket[bucketSec]?.add(MetricValues(focusScore, ear, mar, headPose))
         
-        // auto-save if enough time has passed
         if (now - lastSaveTime >= saveIntervalSeconds * 1000) {
             viewModelScope.launch {
                 saveAccumulatedMetrics()
@@ -275,29 +339,394 @@ class SessionViewModel(
         }
     }
 
-    private fun checkFocusAlert(focusScore: Double) {
-        val now = System.currentTimeMillis()
-        if ((focusScore < 60) && (now - lastVibrationTime > 5000)) {
-            _uiState.value = _uiState.value.copy(shouldVibrate = true)
-            lastVibrationTime = now
-            viewModelScope.launch {
-                delay(500)
-                _uiState.value = _uiState.value.copy(shouldVibrate = false)
+    private fun updateAlertStates(
+        ear: Double?,
+        mar: Double?,
+        head: Double?,
+        focusScore: Double,
+        faceDetected: Boolean,
+        now: Long,
+        allowUserAlerts: Boolean = true
+    ) {
+        val faceDetectedNow = faceDetected
+        if (!faceDetectedNow) {
+            if (faceLostStartTime == null) {
+                faceLostStartTime = now
+            }
+
+            clearContinuousTracking(exceptFace = true)
+
+            if (now - (faceLostStartTime ?: now) >= FACE_LOST_THRESHOLD_MS) {
+                if (isAlertEnabled(SessionAlertType.FACE_LOST)) {
+                    addAlert(
+                        SessionAlertType.FACE_LOST,
+                        context.getString(R.string.session_alert_face_lost)
+                    )
+                    if (!isUserPaused) {
+                        setAutoPaused(true)
+                    }
+                } else {
+                    faceLostStartTime = null
+                }
+            }
+            return
+        } else {
+            faceLostStartTime = null
+            removeAlert(SessionAlertType.FACE_LOST)
+            if (_uiState.value.isAutoPaused && !isUserPaused) {
+                setAutoPaused(false)
+            }
+            if (lastBlinkTimestamp == null) {
+                lastBlinkTimestamp = now
+            }
+        }
+
+        val earBaseline = (baseline?.earMean ?: 0.25).takeIf { it > 0 } ?: 0.25
+        val marBaseline = baseline?.marMean ?: 0.01
+        val headBaseline = baseline?.headPitchMeanDeg ?: 0.0
+
+        if (!allowUserAlerts) {
+            clearUserManagedAlerts()
+            return
+        }
+
+        ear?.let { currentEar ->
+            if (userSettings.eyesClosedAlertsEnabled) {
+                val eyeClosedThreshold = earBaseline * 0.7
+                if (currentEar <= eyeClosedThreshold) {
+                    if (earClosedStartTime == null) {
+                        earClosedStartTime = now
+                    }
+                    if (now - (earClosedStartTime ?: now) >= EYES_CLOSED_THRESHOLD_MS) {
+                        addAlert(
+                            SessionAlertType.EYES_CLOSED,
+                            context.getString(R.string.session_alert_eyes_closed)
+                        )
+                    }
+                } else {
+                    earClosedStartTime = null
+                    removeAlert(SessionAlertType.EYES_CLOSED)
+                }
+            } else {
+                earClosedStartTime = null
+                removeAlert(SessionAlertType.EYES_CLOSED)
+            }
+
+            if (userSettings.blinkAlertsEnabled) {
+                val blinkThreshold = earBaseline * 0.8
+                if (currentEar < blinkThreshold) {
+                    if (!blinkInProgress) {
+                        blinkInProgress = true
+                        blinkTimestamps.addLast(now)
+                        lastBlinkTimestamp = now
+                    }
+                } else {
+                    blinkInProgress = false
+                }
+            } else {
+                blinkInProgress = false
+                blinkTimestamps.clear()
+                removeAlert(SessionAlertType.LOW_BLINK_RATE)
+            }
+        } ?: run {
+            earClosedStartTime = null
+            blinkInProgress = false
+            blinkTimestamps.clear()
+        }
+
+        while (blinkTimestamps.isNotEmpty() && now - blinkTimestamps.first() > BLINK_WINDOW_MS) {
+            blinkTimestamps.removeFirst()
+        }
+
+        if (userSettings.blinkAlertsEnabled && allowUserAlerts) {
+            val noBlinkForWindow = lastBlinkTimestamp != null && now - (lastBlinkTimestamp ?: now) >= BLINK_WINDOW_MS
+            val lowBlinkInWindow = blinkTimestamps.isNotEmpty() &&
+                now - blinkTimestamps.first() >= BLINK_WINDOW_MS &&
+                blinkTimestamps.size < MIN_BLINKS_PER_WINDOW
+
+            if (noBlinkForWindow || lowBlinkInWindow) {
+                addAlert(
+                    SessionAlertType.LOW_BLINK_RATE,
+                    context.getString(R.string.session_alert_low_blink_rate)
+                )
+            } else {
+                removeAlert(SessionAlertType.LOW_BLINK_RATE)
             }
         } else {
-            if (_uiState.value.shouldVibrate) {
-                _uiState.value = _uiState.value.copy(shouldVibrate = false)
+            removeAlert(SessionAlertType.LOW_BLINK_RATE)
+        }
+
+        head?.let { currentHead ->
+            if (userSettings.headPoseAlertsEnabled) {
+                val deviation = kotlin.math.abs(currentHead - headBaseline)
+                if (deviation >= HEAD_DEVIATION_DEGREES) {
+                    if (headDeviationStartTime == null) {
+                        headDeviationStartTime = now
+                    }
+                    if (now - (headDeviationStartTime ?: now) >= HEAD_DEVIATION_THRESHOLD_MS) {
+                        addAlert(
+                            SessionAlertType.HEAD_POSE_DEVIATION,
+                            context.getString(R.string.session_alert_head_pose)
+                        )
+                    }
+                } else {
+                    headDeviationStartTime = null
+                    removeAlert(SessionAlertType.HEAD_POSE_DEVIATION)
+                }
+            } else {
+                headDeviationStartTime = null
+                removeAlert(SessionAlertType.HEAD_POSE_DEVIATION)
+            }
+        } ?: run {
+            headDeviationStartTime = null
+        }
+
+        mar?.let { currentMar ->
+            if (userSettings.yawnAlertsEnabled) {
+                val yawnThreshold = maxOf(marBaseline * 3, marBaseline + 0.2, 0.6)
+                if (currentMar >= yawnThreshold) {
+                    if (!yawnInProgress) {
+                        yawnInProgress = true
+                        yawnTimestamps.addLast(now)
+                    }
+                } else if (currentMar <= yawnThreshold * 0.8) {
+                    yawnInProgress = false
+                }
+            } else {
+                yawnInProgress = false
+                yawnTimestamps.clear()
+                removeAlert(SessionAlertType.REPEATED_YAWN)
+            }
+        } ?: run {
+            yawnInProgress = false
+            yawnTimestamps.clear()
+        }
+
+        while (yawnTimestamps.isNotEmpty() && now - yawnTimestamps.first() > YAWN_WINDOW_MS) {
+            yawnTimestamps.removeFirst()
+        }
+
+        if (userSettings.yawnAlertsEnabled && allowUserAlerts) {
+            if (yawnTimestamps.size >= MIN_YAWNS_IN_WINDOW) {
+                addAlert(
+                    SessionAlertType.REPEATED_YAWN,
+                    context.getString(R.string.session_alert_repeated_yawn)
+                )
+            } else {
+                removeAlert(SessionAlertType.REPEATED_YAWN)
+            }
+        } else {
+            removeAlert(SessionAlertType.REPEATED_YAWN)
+        }
+
+        if (userSettings.lowFocusAlertsEnabled && allowUserAlerts) {
+            if (focusScore < LOW_FOCUS_THRESHOLD) {
+                if (lowFocusStartTime == null) {
+                    lowFocusStartTime = now
+                }
+                if (now - (lowFocusStartTime ?: now) >= LOW_FOCUS_DURATION_MS) {
+                    addAlert(
+                        SessionAlertType.PERSISTENT_LOW_FOCUS,
+                        context.getString(R.string.session_alert_persistent_low_focus)
+                    )
+                }
+            } else {
+                lowFocusStartTime = null
+                removeAlert(SessionAlertType.PERSISTENT_LOW_FOCUS)
+            }
+        } else {
+            lowFocusStartTime = null
+            removeAlert(SessionAlertType.PERSISTENT_LOW_FOCUS)
+        }
+    }
+
+    private fun addAlert(
+        type: SessionAlertType,
+        message: String
+    ) {
+        if (!isAlertEnabled(type)) {
+            return
+        }
+
+        val wasPresent = activeAlerts.containsKey(type)
+        activeAlerts[type] = SessionAlert(type, message)
+        if (!wasPresent) {
+            publishAlerts()
+            if (!isUserPaused) {
+                triggerVibration()
             }
         }
     }
 
+    private fun removeAlert(type: SessionAlertType) {
+        if (activeAlerts.remove(type) != null) {
+            publishAlerts()
+        }
+    }
+
+    private fun publishAlerts() {
+        val ordered = activeAlerts.values.sortedBy { it.type.ordinal }
+        _uiState.update { it.copy(alerts = ordered) }
+    }
+
+    private fun triggerVibration() {
+        val now = System.currentTimeMillis()
+        if (now - lastVibrationTime < MIN_VIBRATION_INTERVAL_MS) {
+            return
+        }
+        lastVibrationTime = now
+        _uiState.update { it.copy(shouldVibrate = true) }
+        viewModelScope.launch {
+            delay(500)
+            _uiState.update { it.copy(shouldVibrate = false) }
+        }
+    }
+
+    private fun setAutoPaused(enabled: Boolean) {
+        val current = _uiState.value
+        if (enabled) {
+            if (!current.isAutoPaused) {
+                _uiState.value = current.copy(isPaused = true, isAutoPaused = true)
+            }
+        } else {
+            if (current.isAutoPaused) {
+                _uiState.value = current.copy(
+                    isPaused = isUserPaused,
+                    isAutoPaused = false
+                )
+            }
+        }
+    }
+
+    private fun clearContinuousTracking(exceptFace: Boolean = false) {
+        if (!exceptFace) {
+            faceLostStartTime = null
+            removeAlert(SessionAlertType.FACE_LOST)
+        }
+        earClosedStartTime = null
+        blinkInProgress = false
+        blinkTimestamps.clear()
+        lastBlinkTimestamp = null
+        headDeviationStartTime = null
+        lowFocusStartTime = null
+        yawnInProgress = false
+        yawnTimestamps.clear()
+        removeAlert(SessionAlertType.EYES_CLOSED)
+        removeAlert(SessionAlertType.LOW_BLINK_RATE)
+        removeAlert(SessionAlertType.HEAD_POSE_DEVIATION)
+        removeAlert(SessionAlertType.REPEATED_YAWN)
+        removeAlert(SessionAlertType.PERSISTENT_LOW_FOCUS)
+    }
+
+    private fun clearUserManagedAlerts() {
+        val removed = activeAlerts.keys.filter {
+            it != SessionAlertType.FACE_LOST
+        }
+        if (removed.isNotEmpty()) {
+            removed.forEach { activeAlerts.remove(it) }
+            publishAlerts()
+        }
+        earClosedStartTime = null
+        headDeviationStartTime = null
+        lowFocusStartTime = null
+        blinkInProgress = false
+        yawnInProgress = false
+        blinkTimestamps.clear()
+        yawnTimestamps.clear()
+        lastBlinkTimestamp = null
+        _uiState.update { it.copy(shouldVibrate = false) }
+    }
+
+    private fun resetTrackingForMonitoringDisabled() {
+        clearContinuousTracking()
+        activeAlerts.clear()
+        publishAlerts()
+        lastBlinkTimestamp = null
+        setAutoPaused(false)
+        _uiState.value = _uiState.value.copy(
+            focusScore = 0.0,
+            faceDetected = false
+        )
+    }
+
+    private fun handleAlertSettingChanges(previous: UserSettings, current: UserSettings) {
+        if (!current.eyesClosedAlertsEnabled && previous.eyesClosedAlertsEnabled) {
+            earClosedStartTime = null
+            removeAlert(SessionAlertType.EYES_CLOSED)
+        }
+
+        if (!current.blinkAlertsEnabled && previous.blinkAlertsEnabled) {
+            blinkInProgress = false
+            blinkTimestamps.clear()
+            lastBlinkTimestamp = null
+            removeAlert(SessionAlertType.LOW_BLINK_RATE)
+        } else if (current.blinkAlertsEnabled && !previous.blinkAlertsEnabled) {
+            lastBlinkTimestamp = System.currentTimeMillis()
+        }
+
+        if (!current.headPoseAlertsEnabled && previous.headPoseAlertsEnabled) {
+            headDeviationStartTime = null
+            removeAlert(SessionAlertType.HEAD_POSE_DEVIATION)
+        }
+
+        if (!current.yawnAlertsEnabled && previous.yawnAlertsEnabled) {
+            yawnInProgress = false
+            yawnTimestamps.clear()
+            removeAlert(SessionAlertType.REPEATED_YAWN)
+        }
+
+        if (!current.lowFocusAlertsEnabled && previous.lowFocusAlertsEnabled) {
+            lowFocusStartTime = null
+            removeAlert(SessionAlertType.PERSISTENT_LOW_FOCUS)
+        }
+
+        if (!current.faceLostAlertsEnabled && previous.faceLostAlertsEnabled) {
+            faceLostStartTime = null
+            removeAlert(SessionAlertType.FACE_LOST)
+            setAutoPaused(false)
+        }
+    }
+
+    private fun isAlertEnabled(type: SessionAlertType): Boolean {
+        return when (type) {
+            SessionAlertType.EYES_CLOSED -> userSettings.eyesClosedAlertsEnabled
+            SessionAlertType.LOW_BLINK_RATE -> userSettings.blinkAlertsEnabled
+            SessionAlertType.HEAD_POSE_DEVIATION -> userSettings.headPoseAlertsEnabled
+            SessionAlertType.REPEATED_YAWN -> userSettings.yawnAlertsEnabled
+            SessionAlertType.PERSISTENT_LOW_FOCUS -> userSettings.lowFocusAlertsEnabled
+            SessionAlertType.FACE_LOST -> userSettings.faceLostAlertsEnabled
+        }
+    }
+
+    companion object {
+        private const val FACE_LOST_THRESHOLD_MS = 2_000L
+        private const val EYES_CLOSED_THRESHOLD_MS = 3_000L
+        private const val BLINK_WINDOW_MS = 60_000L
+        private const val MIN_BLINKS_PER_WINDOW = 5
+        private const val HEAD_DEVIATION_DEGREES = 25.0
+        private const val HEAD_DEVIATION_THRESHOLD_MS = 10_000L
+        private const val YAWN_WINDOW_MS = 5 * 60_000L
+        private const val MIN_YAWNS_IN_WINDOW = 3
+        private const val LOW_FOCUS_THRESHOLD = 60.0
+        private const val LOW_FOCUS_DURATION_MS = 5 * 60_000L
+        private const val MIN_VIBRATION_INTERVAL_MS = 5_000L
+    }
+
     fun pauseSession() {
-        _uiState.value = _uiState.value.copy(isPaused = true)
-        breaksCount++
+        val wasPaused = _uiState.value.isPaused
+        isUserPaused = true
+        setAutoPaused(false)
+        _uiState.value = _uiState.value.copy(isPaused = true, isAutoPaused = false)
+        if (!wasPaused) {
+            breaksCount++
+        }
     }
 
     fun resumeSession() {
-        _uiState.value = _uiState.value.copy(isPaused = false)
+        isUserPaused = false
+        setAutoPaused(false)
+        removeAlert(SessionAlertType.FACE_LOST)
+        _uiState.value = _uiState.value.copy(isPaused = false, isAutoPaused = false)
     }
 
     fun freezeUi() {
@@ -311,12 +740,10 @@ class SessionViewModel(
     fun stopSession() {
         viewModelScope.launch {
             try {
-                // save any remaining accumulated metrics
                 if (metricsPerBucket.isNotEmpty()) {
                     saveAccumulatedMetrics()
                 }
                 
-                // close session with averages
                 if (currentSessionId != null) {
                     val endTime = System.currentTimeMillis()
                     val focusAvg = if (sessionFocusScores.isNotEmpty()) {
@@ -342,22 +769,15 @@ class SessionViewModel(
                         headPitchAvgDegrees = headPitchAvg
                     )
                     
-                    // metrics storage strategy:
-                    // - metrics are saved every 30 seconds during session
-                    // - 2-hour session: ~240 records (7200s / 30s)
-                    // - 1-hour session: ~120 records (3600s / 30s)
-                    // - when displaying graphs, use MetricRepository.getForSessionForGraph() 
-                    //   which downsamples to max 150 points for efficient rendering
-                    // - SessionEntity contains summary data (averages) for history list
-                    // - if storage becomes an issue, you can clean up old metrics (e.g., older than 30 days)
-                    //   by calling: metricRepository.deleteForSession(sessionId) for old sessions
-                    
                     android.util.Log.d("SessionViewModel", "Session closed: ID=$currentSessionId, FocusAvg=$focusAvg")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SessionViewModel", "Error closing session: ${e.message}", e)
             } finally {
-                // clean up
+                isUserPaused = false
+                clearContinuousTracking()
+                activeAlerts.clear()
+                publishAlerts()
                 timerJob?.cancel()
                 saveMetricsJob?.cancel()
                 metricsBuffer.clear()
