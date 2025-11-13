@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,6 +45,7 @@ import com.example.mindfocus.R
 import com.example.mindfocus.core.camera.FaceLandmarkerHelper
 import com.example.mindfocus.core.camera.getCameraProvider
 import com.example.mindfocus.core.vibration.VibrationHelper
+import com.example.mindfocus.core.datastore.SettingsPreferencesManager
 import com.example.mindfocus.core.datastore.AuthPreferencesManager
 import com.example.mindfocus.data.local.MindFocusDatabase
 import com.example.mindfocus.data.repository.BaselineRepository
@@ -73,6 +75,7 @@ fun SessionScreen(
     val sessionRepository = remember { SessionRepository(database) }
     val metricRepository = remember { MetricRepository(database) }
     val baselineRepository = remember { BaselineRepository(database) }
+    val settingsPreferencesManager = remember { SettingsPreferencesManager(context) }
     
     val viewModel: SessionViewModel = viewModel {
         SessionViewModel(
@@ -80,7 +83,8 @@ fun SessionScreen(
             authPreferencesManager = authPreferencesManager,
             sessionRepository = sessionRepository,
             metricRepository = metricRepository,
-            baselineRepository = baselineRepository
+            baselineRepository = baselineRepository,
+            settingsPreferencesManager = settingsPreferencesManager
         )
     }
     val uiState by viewModel.uiState.collectAsState()
@@ -117,7 +121,7 @@ fun SessionScreen(
                         viewModel.updateFaceMetrics(result)
                         
                         val currentState = viewModel.uiState.value
-                        if (currentState.shouldVibrate && currentState.focusScore < 60) {
+                        if (currentState.shouldVibrate) {
                             VibrationHelper.vibrate(context)
                         }
                     } catch (e: Exception) {
@@ -138,7 +142,7 @@ fun SessionScreen(
         }
     }
     
-    LaunchedEffect(key1 = uiState.shouldVibrate, key2 = uiState.focusScore) {
+    LaunchedEffect(uiState.shouldVibrate) {
         if (uiState.shouldVibrate) {
             try {
                 VibrationHelper.vibrate(context)
@@ -182,7 +186,7 @@ fun SessionScreen(
         .setTargetResolution(android.util.Size(640, 480))
         .build()
     
-    LaunchedEffect(lensFacing.value, hasCameraPermission) {
+    LaunchedEffect(lensFacing.value, hasCameraPermission, uiState.cameraMonitoringEnabled) {
         if (!hasCameraPermission) {
             viewModel.freezeUi()
             permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -197,15 +201,17 @@ fun SessionScreen(
             provider.bindToLifecycle(lifecycleOwner, selector, preview, imageAnalysis)
             preview.setSurfaceProvider(previewView.surfaceProvider)
             
-            if (!uiState.isPaused) {
+            if (!uiState.isPaused && uiState.cameraMonitoringEnabled) {
                 setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper, lensFacing.value)
+            } else {
+                imageAnalysis.setAnalyzer(cameraExecutor) { image -> image.close() }
             }
         }
     }
     
-    LaunchedEffect(uiState.isPaused, hasCameraPermission) {
+    LaunchedEffect(uiState.isPaused, hasCameraPermission, uiState.cameraMonitoringEnabled) {
         if (hasCameraPermission) {
-            if (!uiState.isPaused) {
+            if (!uiState.isPaused && uiState.cameraMonitoringEnabled) {
                 setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper, lensFacing.value)
             } else {
                 imageAnalysis.setAnalyzer(cameraExecutor) { image ->
@@ -295,7 +301,20 @@ fun SessionScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                     
-                    if (!hasCameraPermission) {
+                    if (!uiState.cameraMonitoringEnabled) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(colorResource(R.color.darkcharcoal).copy(alpha = 0.85f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_camera_disabled_message),
+                                color = colorResource(R.color.lightsteelblue),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    } else if (!hasCameraPermission) {
                         CameraPermission(
                             onOpenSettings = {
                                 val intent = Intent(
@@ -335,6 +354,13 @@ fun SessionScreen(
                 score = uiState.focusScore.toInt(),
                 modifier = Modifier.fillMaxWidth()
             )
+            
+            if (uiState.alerts.isNotEmpty()) {
+                SessionAlertsCard(
+                    alerts = uiState.alerts,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -583,6 +609,66 @@ private fun SessionTimerCard(
                 fontWeight = FontWeight.Bold,
                 color = colorResource(R.color.amber)
             )
+        }
+    }
+}
+
+@Composable
+private fun SessionAlertsCard(
+    alerts: List<SessionAlert>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colorResource(R.color.midnightblue).copy(alpha = 0.9f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Warning,
+                    contentDescription = stringResource(R.string.session_alerts_title),
+                    tint = colorResource(R.color.coralred)
+                )
+                Text(
+                    text = stringResource(R.string.session_alerts_title),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorResource(R.color.amber)
+                )
+            }
+
+            alerts.forEach { alert ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "•",
+                        fontSize = 18.sp,
+                        color = colorResource(R.color.coralred),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = alert.message,
+                        fontSize = 14.sp,
+                        color = colorResource(R.color.lightsteelblue),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f, fill = true)
+                    )
+                }
+            }
         }
     }
 }

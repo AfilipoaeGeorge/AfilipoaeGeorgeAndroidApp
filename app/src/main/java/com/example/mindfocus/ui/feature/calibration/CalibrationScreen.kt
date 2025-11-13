@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,11 +18,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -30,11 +33,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -42,15 +45,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
 import com.example.mindfocus.core.camera.FaceLandmarkerHelper
 import com.example.mindfocus.core.camera.getCameraProvider
+import com.example.mindfocus.core.datastore.SettingsPreferencesManager
+import com.example.mindfocus.core.datastore.UserSettings
 import com.example.mindfocus.ui.feature.session.components.CameraPermission
 import com.example.mindfocus.ui.feature.session.components.OverlayCamera
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
-import android.os.Handler
-import android.os.Looper
-import androidx.lifecycle.Lifecycle
 import kotlin.math.max
 
 @Composable
@@ -63,6 +65,9 @@ fun CalibrationScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val settingsPreferencesManager = remember { SettingsPreferencesManager(context) }
+    val userSettings by settingsPreferencesManager.settings.collectAsState(initial = UserSettings())
+    val cameraMonitoringEnabled = userSettings.cameraMonitoringEnabled
     
     val viewModel: CalibrationViewModel = viewModel {
         CalibrationViewModel(context)
@@ -109,7 +114,6 @@ fun CalibrationScreen(
     }
     
     val cameraExecutor = remember { Executors.newSingleThreadScheduledExecutor() }
-    
     // Auto-start calibration when screen opens
     LaunchedEffect(Unit) {
         if (!uiState.isRunning) {
@@ -165,30 +169,37 @@ fun CalibrationScreen(
         .setTargetResolution(android.util.Size(640, 480))
         .build()
     
-    LaunchedEffect(hasCameraPermission) {
+    LaunchedEffect(hasCameraPermission, cameraMonitoringEnabled) {
         if (!hasCameraPermission) {
             viewModel.pause()
             permissionLauncher.launch(Manifest.permission.CAMERA)
         } else {
-            viewModel.resume()
+            if (cameraMonitoringEnabled) {
+                viewModel.resume()
+            } else {
+                viewModel.pause()
+            }
             val selector = CameraSelector.Builder()
                 .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                 .build()
-            
             val provider = context.getCameraProvider()
             provider.unbindAll()
             provider.bindToLifecycle(lifecycleOwner, selector, preview, imageAnalysis)
             preview.setSurfaceProvider(previewView.surfaceProvider)
-            
-            if (!uiState.isPaused) {
+
+            if (!uiState.isPaused && cameraMonitoringEnabled) {
                 setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper)
+            } else {
+                imageAnalysis.setAnalyzer(cameraExecutor) { image ->
+                    image.close()
+                }
             }
         }
     }
-    
-    LaunchedEffect(uiState.isPaused, hasCameraPermission) {
+
+    LaunchedEffect(uiState.isPaused, hasCameraPermission, cameraMonitoringEnabled) {
         if (hasCameraPermission) {
-            if (!uiState.isPaused) {
+            if (!uiState.isPaused && cameraMonitoringEnabled) {
                 setImageAnalyzer(imageAnalysis, cameraExecutor, faceHelper)
             } else {
                 imageAnalysis.setAnalyzer(cameraExecutor) { image ->
@@ -262,7 +273,20 @@ fun CalibrationScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                     
-                    if (!hasCameraPermission) {
+                    if (!cameraMonitoringEnabled) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(colorResource(R.color.darkcharcoal).copy(alpha = 0.85f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_camera_disabled_message),
+                                color = colorResource(R.color.lightsteelblue),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    } else if (!hasCameraPermission) {
                         CameraPermission(
                             onOpenSettings = {
                                 val intent = Intent(

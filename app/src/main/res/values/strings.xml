@@ -40,6 +40,13 @@
     <!-- Session Screen -->
     <string name="session_title">Focus Session</string>
     <string name="session_time">Session Time: </string>
+    <string name="session_alerts_title">Active alerts</string>
+    <string name="session_alert_eyes_closed">Eyes seem closed for several seconds. Blink or take a short break.</string>
+    <string name="session_alert_low_blink_rate">Blink rate is much lower than usual. Consider resting your eyes.</string>
+    <string name="session_alert_head_pose">Head angle has been far from the screen for a while. Return to a neutral position.</string>
+    <string name="session_alert_repeated_yawn">Multiple yawns detected recently. It might be time for a break.</string>
+    <string name="session_alert_persistent_low_focus">Focus score has been low for over 5 minutes. Continue or end the session?</string>
+    <string name="session_alert_face_lost">Face is out of frame. Session paused automatically until you return.</string>
     
     <!-- History Screen -->
     <string name="history_title">Session History</string>
@@ -71,10 +78,13 @@
     <string name="settings_camera_description">Camera monitoring settings</string>
     <string name="settings_microphone">Microphone</string>
     <string name="settings_microphone_description">Noise monitoring settings</string>
-    <string name="settings_dnd">Do Not Disturb</string>
-    <string name="settings_dnd_description">Auto-enable DND during sessions</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_description">Alert preferences</string>
+    <string name="eyes_closed_alerts">Eyes closed alert</string>
+    <string name="blink_alerts">Low blink rate alert</string>
+    <string name="head_pose_alerts">Head pose alert</string>
+    <string name="yawn_alerts">Repeated yawn alert</string>
+    <string name="face_lost_alerts">Face lost alert</string>
     <string name="settings_display">Display</string>
     <string name="settings_display_description">Screen and brightness settings</string>
     <string name="settings_privacy">Privacy</string>
@@ -83,14 +93,43 @@
     <string name="settings_about_description">App information and help</string>
     <string name="enable_camera_monitoring">Enable Camera Monitoring</string>
     <string name="enable_noise_monitoring">Enable Noise Monitoring</string>
-    <string name="auto_enable_dnd">Auto-Enable DND</string>
     <string name="low_focus_alerts">Low Focus Alerts</string>
     <string name="noise_alerts">Noise Alerts</string>
-    <string name="daily_reminders">Daily Reminders</string>
     <string name="keep_screen_on">Keep Screen On</string>
     <string name="app_version">Version 1.0.0</string>
     <string name="app_description">Focus and fatigue monitoring companion</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="delete_all_data">Delete All Data</string>
     <string name="help_and_support">Help &amp; Support</string>
+    <string name="settings_camera_monitoring_on">Camera monitoring enabled</string>
+    <string name="settings_camera_monitoring_off">Camera monitoring disabled</string>
+    <string name="settings_low_focus_alerts_enabled">Low focus alerts enabled</string>
+    <string name="settings_low_focus_alerts_disabled">Low focus alerts disabled</string>
+    <string name="settings_eyes_closed_alerts_enabled">Eyes closed alerts enabled</string>
+    <string name="settings_eyes_closed_alerts_disabled">Eyes closed alerts disabled</string>
+    <string name="settings_blink_alerts_enabled">Low blink rate alerts enabled</string>
+    <string name="settings_blink_alerts_disabled">Low blink rate alerts disabled</string>
+    <string name="settings_head_pose_alerts_enabled">Head pose alerts enabled</string>
+    <string name="settings_head_pose_alerts_disabled">Head pose alerts disabled</string>
+    <string name="settings_yawn_alerts_enabled">Repeated yawn alerts enabled</string>
+    <string name="settings_yawn_alerts_disabled">Repeated yawn alerts disabled</string>
+    <string name="settings_face_lost_alerts_enabled">Face lost alerts enabled</string>
+    <string name="settings_face_lost_alerts_disabled">Face lost alerts disabled</string>
+    <string name="settings_delete_data_success">All data deleted successfully</string>
+    <string name="settings_delete_data_error">Failed to delete data: %1$s</string>
+    <string name="settings_generic_error">Something went wrong: %1$s</string>
+    <string name="settings_delete_confirmation_title">Delete all data?</string>
+    <string name="settings_delete_confirmation_message">This will permanently delete all sessions, metrics, baselines, and reset your settings.</string>
+    <string name="settings_delete_confirm">Delete</string>
+    <string name="settings_delete_cancel">Cancel</string>
+    <string name="privacy_policy_url">https://mindfocus.app/privacy</string>
+    <string name="support_email">support@mindfocus.app</string>
+    <string name="support_email_subject">MindFocus support request</string>
+    <string name="settings_no_app_found">No compatible app found to handle this action</string>
+    <string name="settings_no_email_app">No email app found on this device</string>
+    <string name="settings_intent_unavailable">Unable to open system settings</string>
+    <string name="app_version_label">Version %1$s</string>
+    <string name="settings_camera_disabled_message">Camera monitoring disabled in settings</string>
+    <string name="settings_camera_permission_denied">Camera permission is required to enable monitoring</string>
+    <string name="support_center_url">https://mindfocus.app/support</string>
 </resources>
