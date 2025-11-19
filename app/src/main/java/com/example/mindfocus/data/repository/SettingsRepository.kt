@@ -43,6 +43,10 @@ class SettingsRepository(
         preferencesManager.setFaceLostAlertsEnabled(enabled)
     }
 
+    suspend fun setGpsEnabled(enabled: Boolean) {
+        preferencesManager.setGpsEnabled(enabled)
+    }
+
     suspend fun resetSettings() {
         preferencesManager.reset()
     }

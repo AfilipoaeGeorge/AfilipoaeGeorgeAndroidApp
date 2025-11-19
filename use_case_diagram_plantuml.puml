@@ -1,0 +1,92 @@
+@startuml MindFocus_UseCase_Diagram
+
+!define ACTOR_COLOR #FFD700
+!define USE_CASE_COLOR #87CEEB
+!define SYSTEM_BOUNDARY_COLOR #2F4F4F
+
+skinparam actor {
+    BackgroundColor ACTOR_COLOR
+    BorderColor #FFA500
+}
+
+skinparam usecase {
+    BackgroundColor USE_CASE_COLOR
+    BorderColor #4682B4
+}
+
+skinparam rectangle {
+    BackgroundColor SYSTEM_BOUNDARY_COLOR
+    BorderColor #708090
+}
+
+title Diagrama Use Case - MindFocus Application
+
+actor "Utilizator" as User
+
+rectangle "Sistem MindFocus" {
+    ' Autentificare
+    usecase "Login" as UC_Login
+    usecase "Register" as UC_Register
+    usecase "Autentificare" as UC_Auth
+    
+    ' Calibrare
+    usecase "Calibrare Baseline" as UC_Calibration
+    usecase "Pauză Calibrare" as UC_PauseCalibration
+    usecase "Reluare Calibrare" as UC_ResumeCalibration
+    usecase "Oprire Calibrare" as UC_StopCalibration
+    
+    ' Sesiuni
+    usecase "Start Sesiune Focus" as UC_StartSession
+    usecase "Pauză Sesiune" as UC_PauseSession
+    usecase "Reluare Sesiune" as UC_ResumeSession
+    usecase "Oprire Sesiune" as UC_StopSession
+    usecase "Salvare Sesiune" as UC_SaveSession
+    usecase "Vizualizare Alerte" as UC_ViewAlerts
+    
+    ' Istoric
+    usecase "Vizualizare Istoric" as UC_ViewHistory
+    usecase "Vizualizare Detalii Sesiune" as UC_ViewSessionDetails
+    
+    ' Setări
+    usecase "Vizualizare Setări" as UC_ViewSettings
+    usecase "Configurare Monitorizare Cameră" as UC_ConfigureCamera
+    usecase "Configurare Alerte" as UC_ConfigureAlerts
+    usecase "Ștergere Date" as UC_DeleteData
+    usecase "Vizualizare Politică Confidențialitate" as UC_ViewPrivacy
+    usecase "Vizualizare Ajutor" as UC_ViewHelp
+    
+    ' Cont
+    usecase "Logout" as UC_Logout
+}
+
+' Relații Actor - Use Case
+User --> UC_Login
+User --> UC_Register
+User --> UC_Calibration
+User --> UC_StartSession
+User --> UC_ViewHistory
+User --> UC_ViewSettings
+User --> UC_Logout
+
+' Relații Include (dashed arrow cu <<include>>)
+UC_Login ..> UC_Auth : <<include>>
+UC_Register ..> UC_Auth : <<include>>
+UC_StopSession ..> UC_SaveSession : <<include>>
+UC_StopCalibration ..> UC_SaveSession : <<include>>
+
+' Relații Extend (dashed arrow cu <<extend>>)
+UC_ViewAlerts ..> UC_StartSession : <<extend>>
+UC_PauseSession ..> UC_StartSession : <<extend>>
+UC_ResumeSession ..> UC_StartSession : <<extend>>
+UC_PauseCalibration ..> UC_Calibration : <<extend>>
+UC_ResumeCalibration ..> UC_Calibration : <<extend>>
+UC_ViewSessionDetails ..> UC_ViewHistory : <<extend>>
+
+' Relații Include pentru setări
+UC_ViewSettings ..> UC_ConfigureCamera : <<include>>
+UC_ViewSettings ..> UC_ConfigureAlerts : <<include>>
+UC_ViewSettings ..> UC_ViewPrivacy : <<include>>
+UC_ViewSettings ..> UC_ViewHelp : <<include>>
+
+@enduml
+

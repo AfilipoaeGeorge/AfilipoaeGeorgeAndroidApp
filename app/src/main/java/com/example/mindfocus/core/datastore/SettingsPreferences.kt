@@ -23,6 +23,7 @@ object SettingsPreferencesKeys {
     val HEAD_POSE_ALERTS_ENABLED = booleanPreferencesKey("head_pose_alerts_enabled")
     val YAWN_ALERTS_ENABLED = booleanPreferencesKey("yawn_alerts_enabled")
     val FACE_LOST_ALERTS_ENABLED = booleanPreferencesKey("face_lost_alerts_enabled")
+    val GPS_ENABLED = booleanPreferencesKey("gps_enabled")
 }
 
 data class UserSettings(
@@ -32,7 +33,8 @@ data class UserSettings(
     val blinkAlertsEnabled: Boolean = true,
     val headPoseAlertsEnabled: Boolean = true,
     val yawnAlertsEnabled: Boolean = true,
-    val faceLostAlertsEnabled: Boolean = true
+    val faceLostAlertsEnabled: Boolean = true,
+    val gpsEnabled: Boolean = true
 )
 
 class SettingsPreferencesManager(private val context: Context) {
@@ -60,6 +62,8 @@ class SettingsPreferencesManager(private val context: Context) {
                 yawnAlertsEnabled = preferences[SettingsPreferencesKeys.YAWN_ALERTS_ENABLED]
                     ?: true,
                 faceLostAlertsEnabled = preferences[SettingsPreferencesKeys.FACE_LOST_ALERTS_ENABLED]
+                    ?: true,
+                gpsEnabled = preferences[SettingsPreferencesKeys.GPS_ENABLED]
                     ?: true
             )
         }
@@ -103,6 +107,12 @@ class SettingsPreferencesManager(private val context: Context) {
     suspend fun setFaceLostAlertsEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { prefs ->
             prefs[SettingsPreferencesKeys.FACE_LOST_ALERTS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setGpsEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[SettingsPreferencesKeys.GPS_ENABLED] = enabled
         }
     }
 

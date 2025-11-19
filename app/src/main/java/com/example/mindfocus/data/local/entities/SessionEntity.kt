@@ -26,5 +26,7 @@ data class SessionEntity(
     val focusAvg: Double? = null,
     val earAvg: Double? = null,
     val marAvg: Double? = null,
-    val headPitchAvgDegrees: Double? = null
+    val headPitchAvgDegrees: Double? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )

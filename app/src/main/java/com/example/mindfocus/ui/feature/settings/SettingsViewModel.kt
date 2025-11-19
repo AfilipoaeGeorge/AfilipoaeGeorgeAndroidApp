@@ -111,6 +111,13 @@ class SettingsViewModel(
         )
     }
 
+    fun onGpsChanged(enabled: Boolean) {
+        updateSetting(
+            action = { settingsRepository.setGpsEnabled(enabled) },
+            successMessage = null // No message needed, permission request will handle feedback
+        )
+    }
+
     fun onPrivacyPolicyClicked() {
         viewModelScope.launch {
             _events.emit(SettingsEvent.OpenUrl(context.getString(R.string.privacy_policy_url)))
