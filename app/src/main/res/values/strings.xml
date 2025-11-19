@@ -132,4 +132,12 @@
     <string name="settings_camera_disabled_message">Camera monitoring disabled in settings</string>
     <string name="settings_camera_permission_denied">Camera permission is required to enable monitoring</string>
     <string name="support_center_url">https://mindfocus.app/support</string>
+    
+    <!-- Location Settings -->
+    <string name="settings_location">Location</string>
+    <string name="enable_gps">Enable GPS Location</string>
+    <string name="enable_gps_description">Track location for sessions</string>
+    <string name="settings_location_permission_denied">Location permission is required to enable GPS tracking</string>
+    <string name="loading_location">Loading location...</string>
+    <string name="location_not_available">Location not available</string>
 </resources>

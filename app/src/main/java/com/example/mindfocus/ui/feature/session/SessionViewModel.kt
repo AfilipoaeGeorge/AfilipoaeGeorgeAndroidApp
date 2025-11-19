@@ -7,6 +7,7 @@ import com.example.mindfocus.core.datastore.AuthPreferencesManager
 import com.example.mindfocus.core.datastore.SettingsPreferencesManager
 import com.example.mindfocus.core.datastore.UserSettings
 import com.example.mindfocus.core.face.FaceMetricsCalculator
+import com.example.mindfocus.core.location.LocationManager
 import com.example.mindfocus.data.local.entities.BaselineEntity
 import com.example.mindfocus.data.local.entities.MetricEntity
 import com.example.mindfocus.data.local.entities.SessionEntity
@@ -19,6 +20,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.update
 import com.example.mindfocus.R
@@ -31,6 +33,8 @@ class SessionViewModel(
     private val baselineRepository: BaselineRepository,
     private val settingsPreferencesManager: SettingsPreferencesManager
 ) : ViewModel() {
+
+    private val locationManager = LocationManager(context)
 
     private val _uiState = MutableStateFlow(SessionUiState())
     val uiState: StateFlow<SessionUiState> = _uiState.asStateFlow()
@@ -100,15 +104,69 @@ class SessionViewModel(
                 if (userId != null) {
                     baseline = baselineRepository.getForUser(userId)
                     
+                    // Get current GPS setting from preferences
+                    val currentSettings = settingsPreferencesManager.settings.first()
+                    val gpsEnabled = currentSettings.gpsEnabled
+                    
+                    android.util.Log.d("SessionViewModel", "Current GPS setting: $gpsEnabled")
+                    
+                    // Get location only if GPS is enabled
+                    val locationData = if (gpsEnabled) {
+                        val hasPermission = locationManager.hasLocationPermission()
+                        val isLocationEnabled = locationManager.isLocationEnabled()
+                        android.util.Log.d("SessionViewModel", "GPS enabled. Has permission: $hasPermission, Location services enabled: $isLocationEnabled")
+                        
+                        if (hasPermission) {
+                            if (!isLocationEnabled) {
+                                android.util.Log.w("SessionViewModel", "GPS enabled and permission granted, but location services are disabled on device")
+                            }
+                            
+                            try {
+                                android.util.Log.d("SessionViewModel", "Attempting to get current location...")
+                                val currentLocation = locationManager.getCurrentLocation()
+                                android.util.Log.d("SessionViewModel", "Current location: ${currentLocation?.latitude}, ${currentLocation?.longitude}")
+                                
+                                if (currentLocation != null) {
+                                    currentLocation
+                                } else {
+                                    android.util.Log.d("SessionViewModel", "Current location is null, trying last known location...")
+                                    val lastKnownLocation = locationManager.getLastKnownLocation()
+                                    android.util.Log.d("SessionViewModel", "Last known location: ${lastKnownLocation?.latitude}, ${lastKnownLocation?.longitude}")
+                                    lastKnownLocation
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("SessionViewModel", "Error getting location: ${e.message}", e)
+                                null
+                            }
+                        } else {
+                            android.util.Log.w("SessionViewModel", "GPS enabled but no location permission granted. Location will not be saved.")
+                            null
+                        }
+                    } else {
+                        android.util.Log.d("SessionViewModel", "GPS disabled. Location will not be saved.")
+                        null
+                    }
+                    
+                    android.util.Log.d("SessionViewModel", "Final location data: ${locationData?.latitude}, ${locationData?.longitude}")
+                    
                     //start session in database
                     sessionStartTime = System.currentTimeMillis()
                     val session = SessionEntity(
                         userId = userId,
                         startedAtEpochMs = sessionStartTime,
                         endedAtEpochMs = null,
-                        breaksCount = 0
+                        breaksCount = 0,
+                        latitude = locationData?.latitude,
+                        longitude = locationData?.longitude
                     )
                     currentSessionId = sessionRepository.start(session)
+                    android.util.Log.d("SessionViewModel", "Session created with ID: $currentSessionId, Location: ${session.latitude}, ${session.longitude}")
+                    
+                    // Verify session was saved correctly
+                    currentSessionId?.let { sessionId ->
+                        val savedSession = sessionRepository.getById(sessionId)
+                        android.util.Log.d("SessionViewModel", "Verified saved session - ID: ${savedSession?.id}, Location: ${savedSession?.latitude}, ${savedSession?.longitude}")
+                    }
                     lastSaveTime = sessionStartTime
                 }
                 
@@ -759,17 +817,40 @@ class SessionViewModel(
                         sessionHeadPoseValues.average()
                     } else null
                     
-                    sessionRepository.close(
-                        id = currentSessionId!!,
-                        endMs = endTime,
-                        breaks = breaksCount,
-                        focusAvg = focusAvg,
-                        earAvg = earAvg,
-                        marAvg = marAvg,
-                        headPitchAvgDegrees = headPitchAvg
-                    )
+                    // Get existing session to preserve location data
+                    val existingSession = sessionRepository.getById(currentSessionId!!)
+                    android.util.Log.d("SessionViewModel", "Closing session - existing session location: ${existingSession?.latitude}, ${existingSession?.longitude}")
                     
-                    android.util.Log.d("SessionViewModel", "Session closed: ID=$currentSessionId, FocusAvg=$focusAvg")
+                    if (existingSession != null) {
+                        // Update session with all fields, preserving location
+                        val updatedSession = existingSession.copy(
+                            endedAtEpochMs = endTime,
+                            breaksCount = breaksCount,
+                            focusAvg = focusAvg,
+                            earAvg = earAvg,
+                            marAvg = marAvg,
+                            headPitchAvgDegrees = headPitchAvg
+                            // latitude and longitude are preserved from existingSession
+                        )
+                        sessionRepository.start(updatedSession)
+                        android.util.Log.d("SessionViewModel", "Session closed: ID=$currentSessionId, FocusAvg=$focusAvg, Location: ${updatedSession.latitude}, ${updatedSession.longitude}")
+                        
+                        // Verify session was saved correctly after closing
+                        val closedSession = sessionRepository.getById(currentSessionId!!)
+                        android.util.Log.d("SessionViewModel", "Verified closed session - ID: ${closedSession?.id}, Location: ${closedSession?.latitude}, ${closedSession?.longitude}")
+                    } else {
+                        // Fallback to old method if session not found
+                        sessionRepository.close(
+                            id = currentSessionId!!,
+                            endMs = endTime,
+                            breaks = breaksCount,
+                            focusAvg = focusAvg,
+                            earAvg = earAvg,
+                            marAvg = marAvg,
+                            headPitchAvgDegrees = headPitchAvg
+                        )
+                        android.util.Log.d("SessionViewModel", "Session closed (fallback): ID=$currentSessionId, FocusAvg=$focusAvg")
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SessionViewModel", "Error closing session: ${e.message}", e)

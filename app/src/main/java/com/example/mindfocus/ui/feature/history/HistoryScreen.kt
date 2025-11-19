@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mindfocus.R
 import com.example.mindfocus.core.datastore.AuthPreferencesManager
+import com.example.mindfocus.core.location.LocationManager
 import com.example.mindfocus.data.local.MindFocusDatabase
 import com.example.mindfocus.data.repository.MetricRepository
 import com.example.mindfocus.data.repository.SessionRepository
@@ -43,7 +45,9 @@ data class SessionHistoryItem(
     val ear: Double,
     val mar: Double,
     val headPose: Double,
-    val scoreEvolution: List<Int>
+    val scoreEvolution: List<Int>,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 @Composable
@@ -334,6 +338,110 @@ private fun SessionHistoryCard(
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                 thickness = 1.dp
             )
+            
+            // Display location if available
+            if (session.latitude != null && session.longitude != null) {
+                val context = LocalContext.current
+                val locationManager = remember { LocationManager(context) }
+                var locationString by remember(session.latitude, session.longitude) { mutableStateOf<String?>(null) }
+                var isLoadingLocation by remember { mutableStateOf(true) }
+
+                LaunchedEffect(session.latitude, session.longitude) {
+                    android.util.Log.d("HistoryScreen", "LaunchedEffect triggered for session ${session.id} with location: ${session.latitude}, ${session.longitude}")
+                    isLoadingLocation = true
+                    try {
+                        locationString = locationManager.formatLocation(session.latitude!!, session.longitude!!)
+                        android.util.Log.d("HistoryScreen", "Session ${session.id} location: ${session.latitude}, ${session.longitude}, formatted: $locationString")
+                        // If formatLocation returns null, use coordinates as fallback
+                        if (locationString == null) {
+                            locationString = "${session.latitude}, ${session.longitude}"
+                            android.util.Log.d("HistoryScreen", "formatLocation returned null, using coordinates: $locationString")
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("HistoryScreen", "Error formatting location: ${e.message}", e)
+                        locationString = "${session.latitude}, ${session.longitude}" // Fallback to coordinates
+                    } finally {
+                        isLoadingLocation = false
+                        android.util.Log.d("HistoryScreen", "Location loading completed for session ${session.id}, locationString: $locationString")
+                    }
+                }
+
+                // Always show location if we have coordinates, even if formatting failed
+                if (!isLoadingLocation) {
+                    val displayLocation = locationString ?: "${session.latitude}, ${session.longitude}"
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.LocationOn,
+                            contentDescription = "Location",
+                            tint = colorResource(R.color.amber),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = displayLocation,
+                            fontSize = 12.sp,
+                            color = colorResource(R.color.lightsteelblue),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Divider(
+                        color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                        thickness = 1.dp
+                    )
+                } else if (isLoadingLocation) {
+                    // Show loading state
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.LocationOn,
+                            contentDescription = "Loading Location",
+                            tint = colorResource(R.color.amber).copy(alpha = 0.5f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.loading_location),
+                            fontSize = 12.sp,
+                            color = colorResource(R.color.lightsteelblue).copy(alpha = 0.5f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Divider(
+                        color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                        thickness = 1.dp
+                    )
+                }
+            } else {
+                // Session has no location - show only faded icon with empty space
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = "Location not available",
+                        tint = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.location_not_available),
+                        fontSize = 12.sp,
+                        color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Divider(
+                    color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                    thickness = 1.dp
+                )
+            }
             
             Column {
                 Text(

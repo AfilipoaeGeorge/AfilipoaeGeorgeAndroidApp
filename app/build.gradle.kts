@@ -80,7 +80,6 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // CameraX
     implementation(libs.androidx.camera.core)
@@ -91,6 +90,12 @@ dependencies {
 
     // MediaPipe
     implementation(libs.google.mediapipe.tasks.vision)
+
+    // Google Play Services Location
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    
+    // Kotlin Coroutines support for Google Play Services
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 
     testImplementation("androidx.room:room-testing:2.8.3")
 

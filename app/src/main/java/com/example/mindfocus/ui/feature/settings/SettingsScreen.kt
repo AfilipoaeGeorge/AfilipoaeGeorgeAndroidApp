@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Help
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.example.mindfocus.R
 import com.example.mindfocus.core.datastore.SettingsPreferencesManager
 import com.example.mindfocus.data.local.MindFocusDatabase
@@ -76,12 +78,33 @@ fun SettingsScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (!granted) {
             viewModel.onCameraPermissionDenied()
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        android.util.Log.d("SettingsScreen", "Location permission result: $permissions")
+        val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocationGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+
+        android.util.Log.d("SettingsScreen", "Fine location granted: $fineLocationGranted, Coarse location granted: $coarseLocationGranted")
+
+        if (!fineLocationGranted && !coarseLocationGranted) {
+            // Permisiunile au fost refuzate, afișează mesaj
+            android.util.Log.w("SettingsScreen", "Location permissions denied")
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    context.getString(R.string.settings_location_permission_denied)
+                )
+            }
         }
     }
 
@@ -189,6 +212,54 @@ fun SettingsScreen(
                                                     ) == PackageManager.PERMISSION_GRANTED
                                                     if (!granted) {
                                                         cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    )
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        item {
+                            SettingsSectionCard(
+                                section = SettingsSection(
+                                    title = stringResource(R.string.settings_location),
+                                    icon = Icons.Outlined.LocationOn,
+                                    items = listOf(
+                                        SettingsItem(
+                                            title = stringResource(R.string.enable_gps),
+                                            description = stringResource(R.string.enable_gps_description),
+                                            isSwitch = true,
+                                            isEnabled = settings.gpsEnabled,
+                                            onCheckedChange = { enabled ->
+                                                android.util.Log.d("SettingsScreen", "GPS switch changed to: $enabled")
+                                                // Activează/dezactivează GPS-ul imediat (similar cu cameră)
+                                                viewModel.onGpsChanged(enabled)
+                                                
+                                                if (enabled) {
+                                                    // Verifică dacă permisiunile sunt deja acordate
+                                                    val fineLocationGranted = ContextCompat.checkSelfPermission(
+                                                        context,
+                                                        Manifest.permission.ACCESS_FINE_LOCATION
+                                                    ) == PackageManager.PERMISSION_GRANTED
+                                                    val coarseLocationGranted = ContextCompat.checkSelfPermission(
+                                                        context,
+                                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                                    android.util.Log.d("SettingsScreen", "Current permissions - Fine: $fineLocationGranted, Coarse: $coarseLocationGranted")
+
+                                                    if (!fineLocationGranted && !coarseLocationGranted) {
+                                                        // Cer permisiunile dacă nu sunt deja acordate
+                                                        android.util.Log.d("SettingsScreen", "Requesting location permissions")
+                                                        locationPermissionLauncher.launch(
+                                                            arrayOf(
+                                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             }
