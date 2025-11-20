@@ -10,6 +10,7 @@ import com.example.mindfocus.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,6 +27,7 @@ class HomeViewModel(
 
     init {
         loadUserData()
+        observeSessions()
     }
 
     private fun loadUserData() {
@@ -45,38 +47,9 @@ class HomeViewModel(
                 val user = userRepository.getById(userId)
                 val username = user?.displayName
 
-                val lastSession = sessionRepository.getLastCompletedSession(userId)
-                
-                android.util.Log.d("HomeViewModel", "Last session: ${lastSession?.id}, Location: ${lastSession?.latitude}, ${lastSession?.longitude}")
-                
-                val lastFocusScore = lastSession?.focusAvg?.toInt()
-                val lastSessionDate = lastSession?.let { formatSessionDate(it.endedAtEpochMs ?: it.startedAtEpochMs) }
-                
-                // Format location if available
-                val lastSessionLocation = lastSession?.let { session ->
-                    if (session.latitude != null && session.longitude != null) {
-                        try {
-                            val locationManager = LocationManager(context)
-                            val formatted = locationManager.formatLocation(session.latitude, session.longitude)
-                            formatted ?: "${session.latitude}, ${session.longitude}"
-                        } catch (e: Exception) {
-                            android.util.Log.e("HomeViewModel", "Error formatting location: ${e.message}", e)
-                            // Fallback to coordinates if geocoding fails
-                            "${session.latitude}, ${session.longitude}"
-                        }
-                    } else {
-                        null
-                    }
-                } ?: null
-                
-                android.util.Log.d("HomeViewModel", "Last session location: ${lastSession?.latitude}, ${lastSession?.longitude}, Formatted: $lastSessionLocation")
-
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     username = username,
-                    lastFocusScore = lastFocusScore,
-                    lastSessionDate = lastSessionDate,
-                    lastSessionLocation = lastSessionLocation,
                     errorMessage = null
                 )
             } catch (e: Exception) {
@@ -85,6 +58,55 @@ class HomeViewModel(
                     isLoading = false,
                     errorMessage = "Failed to load data: ${e.message}"
                 )
+            }
+        }
+    }
+
+    private fun observeSessions() {
+        viewModelScope.launch {
+            try {
+                val userId = authPreferencesManager.getCurrentUserId()
+                if (userId == null) {
+                    return@launch
+                }
+
+                sessionRepository.observeForUser(userId)
+                    .map { sessions ->
+                        sessions.filter { it.endedAtEpochMs != null }
+                            .sortedByDescending { it.startedAtEpochMs }
+                            .firstOrNull()
+                    }
+                    .collect { lastSession ->
+                        android.util.Log.d("HomeViewModel", "Observed last session: ${lastSession?.id}, Location: ${lastSession?.latitude}, ${lastSession?.longitude}")
+                        
+                        val lastFocusScore = lastSession?.focusAvg?.toInt()
+                        val lastSessionDate = lastSession?.let { formatSessionDate(it.endedAtEpochMs ?: it.startedAtEpochMs) }
+                        
+                        val lastSessionLocation = lastSession?.let { session ->
+                            if (session.latitude != null && session.longitude != null) {
+                                try {
+                                    val locationManager = LocationManager(context)
+                                    val formatted = locationManager.formatLocation(session.latitude, session.longitude)
+                                    formatted ?: "${session.latitude}, ${session.longitude}"
+                                } catch (e: Exception) {
+                                    android.util.Log.e("HomeViewModel", "Error formatting location: ${e.message}", e)
+                                    "${session.latitude}, ${session.longitude}"
+                                }
+                            } else {
+                                null
+                            }
+                        } ?: null
+                        
+                        android.util.Log.d("HomeViewModel", "Updated last session location: ${lastSession?.latitude}, ${lastSession?.longitude}, Formatted: $lastSessionLocation")
+
+                        _uiState.value = _uiState.value.copy(
+                            lastFocusScore = lastFocusScore,
+                            lastSessionDate = lastSessionDate,
+                            lastSessionLocation = lastSessionLocation
+                        )
+                    }
+            } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Error observing sessions: ${e.message}", e)
             }
         }
     }
