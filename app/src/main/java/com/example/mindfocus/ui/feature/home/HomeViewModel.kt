@@ -51,35 +51,6 @@ class HomeViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     username = username,
-                val lastSession = sessionRepository.getLastCompletedSession(userId)
-                
-                android.util.Log.d("HomeViewModel", "Last session: ${lastSession?.id}, Location: ${lastSession?.latitude}, ${lastSession?.longitude}")
-                
-                val lastFocusScore = lastSession?.focusAvg?.toInt()
-                val lastSessionDate = lastSession?.let { formatSessionDate(it.endedAtEpochMs ?: it.startedAtEpochMs) }
-                
-                // Format location if available
-                val lastSessionLocation = lastSession?.let { session ->
-                    if (session.latitude != null && session.longitude != null) {
-                        try {
-                            val locationManager = LocationManager(context)
-                            val formatted = locationManager.formatLocation(session.latitude, session.longitude)
-                            formatted ?: "${session.latitude}, ${session.longitude}"
-                        } catch (e: Exception) {
-                            android.util.Log.e("HomeViewModel", "Error formatting location: ${e.message}", e)
-                            // Fallback to coordinates if geocoding fails
-                            "${session.latitude}, ${session.longitude}"
-                        }
-                    } else {
-                        null
-                    }
-                } ?: null
-                
-                android.util.Log.d("HomeViewModel", "Last session location: ${lastSession?.latitude}, ${lastSession?.longitude}, Formatted: $lastSessionLocation")
-
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    username = username,
                     errorMessage = null
                 )
             } catch (e: Exception) {
@@ -112,14 +83,36 @@ class HomeViewModel(
                         android.util.Log.e("HomeViewModel", "Error observing sessions: ${e.message}", e)
                     }
                     .collect { lastSession ->
+                        android.util.Log.d("HomeViewModel", "Observed last session: ${lastSession?.id}, Location: ${lastSession?.latitude}, ${lastSession?.longitude}")
+                        
                         val lastFocusScore = lastSession?.focusAvg?.toInt()
                         val lastSessionDate = lastSession?.let { 
                             formatSessionDate(it.endedAtEpochMs ?: it.startedAtEpochMs) 
                         }
                         
+                        // Format location if available
+                        val lastSessionLocation = lastSession?.let { session ->
+                            if (session.latitude != null && session.longitude != null) {
+                                try {
+                                    val locationManager = LocationManager(context)
+                                    val formatted = locationManager.formatLocation(session.latitude, session.longitude)
+                                    formatted ?: "${session.latitude}, ${session.longitude}"
+                                } catch (e: Exception) {
+                                    android.util.Log.e("HomeViewModel", "Error formatting location: ${e.message}", e)
+                                    // Fallback to coordinates if geocoding fails
+                                    "${session.latitude}, ${session.longitude}"
+                                }
+                            } else {
+                                null
+                            }
+                        } ?: null
+                        
+                        android.util.Log.d("HomeViewModel", "Updated last session location: ${lastSession?.latitude}, ${lastSession?.longitude}, Formatted: $lastSessionLocation")
+                        
                         _uiState.value = _uiState.value.copy(
                             lastFocusScore = lastFocusScore,
-                            lastSessionDate = lastSessionDate
+                            lastSessionDate = lastSessionDate,
+                            lastSessionLocation = lastSessionLocation
                         )
                     }
             } catch (e: Exception) {
