@@ -52,7 +52,12 @@ class SettingsRepository(
     }
 
     suspend fun clearAllData() {
-        database.clearAllTables()
+        // Delete all data from all tables except users (accounts)
+        // Order matters: delete child tables first (metrics), then parent tables (sessions, baseline)
+        database.metricDao().deleteAll()
+        database.sessionDao().deleteAll()
+        database.baselineDao().deleteAll()
+        // Note: userDao().deleteAll() is NOT called to preserve user accounts
         preferencesManager.reset()
     }
 }

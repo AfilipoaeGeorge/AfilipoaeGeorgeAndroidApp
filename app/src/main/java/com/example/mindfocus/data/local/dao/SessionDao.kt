@@ -33,4 +33,7 @@ interface SessionDao {
     
     @Query("SELECT * FROM sessions WHERE userId = :userId AND endedAtEpochMs IS NOT NULL ORDER BY startedAtEpochMs DESC LIMIT 1")
     suspend fun getLastCompletedSession(userId: Long): SessionEntity?
+
+    @Query("DELETE FROM sessions")
+    suspend fun deleteAll()
 }
