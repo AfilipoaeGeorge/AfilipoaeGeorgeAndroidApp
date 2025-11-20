@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -188,11 +189,19 @@ fun HistoryScreen(
                     items(sessionList) { session ->
                         SessionHistoryCard(
                             session = session,
+                            onDeleteClick = { viewModel.requestDeleteSession(session.id) },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
             }
+        }
+
+        if (uiState.sessionToDelete != null) {
+            DeleteSessionConfirmationDialog(
+                onDismiss = { viewModel.cancelDeleteSession() },
+                onConfirm = { viewModel.confirmDeleteSession() }
+            )
         }
     }
 }
@@ -200,6 +209,7 @@ fun HistoryScreen(
 @Composable
 private fun SessionHistoryCard(
     session: SessionHistoryItem,
+    onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
@@ -252,20 +262,35 @@ private fun SessionHistoryCard(
                 }
                 
                 Row(
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "${session.focusScore}",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = scoreColor
-                    )
-                    Text(
-                        text = stringResource(R.string.focus_score_max),
-                        fontSize = 16.sp,
-                        color = colorResource(R.color.lightsteelblue)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "${session.focusScore}",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = scoreColor
+                        )
+                        Text(
+                            text = stringResource(R.string.focus_score_max),
+                            fontSize = 16.sp,
+                            color = colorResource(R.color.lightsteelblue)
+                        )
+                    }
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "Delete session",
+                            tint = colorResource(R.color.coralred)
+                        )
+                    }
                 }
             }
             
@@ -574,6 +599,52 @@ private fun ScoreEvolutionChart(
             }
         }
     }
+}
+
+@Composable
+private fun DeleteSessionConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.settings_delete_confirm),
+                    color = colorResource(R.color.coralred)
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.settings_delete_cancel),
+                    color = colorResource(R.color.lightsteelblue)
+                )
+            }
+        },
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.Delete,
+                contentDescription = null,
+                tint = colorResource(R.color.coralred)
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.delete_session_title),
+                color = colorResource(R.color.amber)
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.delete_session_message),
+                color = colorResource(R.color.lightsteelblue)
+            )
+        },
+        containerColor = colorResource(R.color.midnightblue)
+    )
 }
 
 @Composable

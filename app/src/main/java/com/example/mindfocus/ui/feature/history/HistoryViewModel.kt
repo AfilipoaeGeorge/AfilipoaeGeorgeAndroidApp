@@ -114,5 +114,32 @@ class HistoryViewModel(
     fun refresh() {
         loadHistory()
     }
+
+    fun requestDeleteSession(sessionId: Long) {
+        _uiState.value = _uiState.value.copy(sessionToDelete = sessionId)
+    }
+
+    fun cancelDeleteSession() {
+        _uiState.value = _uiState.value.copy(sessionToDelete = null)
+    }
+
+    fun confirmDeleteSession() {
+        val sessionId = _uiState.value.sessionToDelete
+        if (sessionId != null) {
+            viewModelScope.launch {
+                try {
+                    sessionRepository.delete(sessionId)
+                    _uiState.value = _uiState.value.copy(sessionToDelete = null)
+                    // History will automatically refresh due to the Flow observation
+                } catch (e: Exception) {
+                    android.util.Log.e("HistoryViewModel", "Error deleting session: ${e.message}", e)
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "Error deleting session: ${e.message}",
+                        sessionToDelete = null
+                    )
+                }
+            }
+        }
+    }
 }
 

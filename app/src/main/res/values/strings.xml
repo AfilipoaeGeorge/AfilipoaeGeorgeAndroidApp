@@ -60,6 +60,8 @@
     <string name="empty_history_emoji">📊</string>
     <string name="empty_history_title">No Sessions Yet</string>
     <string name="empty_history_message">Start your first focus session to see your history here</string>
+    <string name="delete_session_title">Delete session?</string>
+    <string name="delete_session_message">This will permanently delete this session and all its metrics. This action cannot be undone.</string>
     
     <!-- Metrics -->
     <string name="ear_label">EAR</string>

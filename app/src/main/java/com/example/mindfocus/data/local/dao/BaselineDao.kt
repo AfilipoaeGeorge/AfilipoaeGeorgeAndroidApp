@@ -12,4 +12,7 @@ interface BaselineDao {
 
     @Query("SELECT * FROM baseline WHERE userId = :userId LIMIT 1")
     suspend fun getForUser(userId: Long): BaselineEntity?
+
+    @Query("DELETE FROM baseline")
+    suspend fun deleteAll()
 }
