@@ -80,9 +80,6 @@ class HomeViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     username = username,
-                    lastFocusScore = lastFocusScore,
-                    lastSessionDate = lastSessionDate,
-                    lastSessionLocation = lastSessionLocation,
                     errorMessage = null
                 )
             } catch (e: Exception) {

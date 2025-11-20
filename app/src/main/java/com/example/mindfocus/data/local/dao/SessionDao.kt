@@ -14,7 +14,7 @@ interface SessionDao {
     @Query("SELECT * FROM sessions WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): SessionEntity?
 
-    @Query("UPDATE sessions SET endedAtEpochMs = :endMs, breaksCount = :breaks, focusAvg = :focusAvg, earAvg = :earAvg, marAvg = :marAvg, headPitchAvgDegrees = :headPitchAvgDegrees WHERE id = :id")
+    @Query("UPDATE sessions SET endedAtEpochMs = :endMs, breaksCount = :breaks, focusAvg = :focusAvg, earAvg = :earAvg, marAvg = :marAvg, headPitchAvgDegrees = :headPitchAvgDegrees, latitude = :latitude, longitude = :longitude WHERE id = :id")
     suspend fun closeSession(
         id: Long,
         endMs: Long,
@@ -22,7 +22,9 @@ interface SessionDao {
         focusAvg: Double?,
         earAvg: Double?,
         marAvg: Double?,
-        headPitchAvgDegrees: Double?
+        headPitchAvgDegrees: Double?,
+        latitude: Double?,
+        longitude: Double?
     )
 
     @Query("DELETE FROM sessions WHERE id = :id")

@@ -34,7 +34,7 @@ data class UserSettings(
     val headPoseAlertsEnabled: Boolean = true,
     val yawnAlertsEnabled: Boolean = true,
     val faceLostAlertsEnabled: Boolean = true,
-    val gpsEnabled: Boolean = true
+    val gpsEnabled: Boolean = false
 )
 
 class SettingsPreferencesManager(private val context: Context) {
@@ -64,7 +64,7 @@ class SettingsPreferencesManager(private val context: Context) {
                 faceLostAlertsEnabled = preferences[SettingsPreferencesKeys.FACE_LOST_ALERTS_ENABLED]
                     ?: true,
                 gpsEnabled = preferences[SettingsPreferencesKeys.GPS_ENABLED]
-                    ?: true
+                    ?: false
             )
         }
 
