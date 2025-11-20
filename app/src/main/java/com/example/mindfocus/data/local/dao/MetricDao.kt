@@ -16,4 +16,7 @@ interface MetricDao {
 
     @Query("DELETE FROM metrics WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: Long)
+
+    @Query("DELETE FROM metrics")
+    suspend fun deleteAll()
 }

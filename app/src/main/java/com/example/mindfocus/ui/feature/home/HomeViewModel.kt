@@ -9,6 +9,8 @@ import com.example.mindfocus.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -25,6 +27,7 @@ class HomeViewModel(
 
     init {
         loadUserData()
+        observeLastSession()
     }
 
     private fun loadUserData() {
@@ -44,16 +47,9 @@ class HomeViewModel(
                 val user = userRepository.getById(userId)
                 val username = user?.displayName
 
-                val lastSession = sessionRepository.getLastCompletedSession(userId)
-                
-                val lastFocusScore = lastSession?.focusAvg?.toInt()
-                val lastSessionDate = lastSession?.let { formatSessionDate(it.endedAtEpochMs ?: it.startedAtEpochMs) }
-
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     username = username,
-                    lastFocusScore = lastFocusScore,
-                    lastSessionDate = lastSessionDate,
                     errorMessage = null
                 )
             } catch (e: Exception) {
@@ -62,6 +58,42 @@ class HomeViewModel(
                     isLoading = false,
                     errorMessage = "Failed to load data: ${e.message}"
                 )
+            }
+        }
+    }
+
+    private fun observeLastSession() {
+        viewModelScope.launch {
+            try {
+                val userId = authPreferencesManager.getCurrentUserId()
+                if (userId == null) {
+                    return@launch
+                }
+
+                // Observe sessions and automatically update last session when they change
+                sessionRepository.observeForUser(userId)
+                    .map { sessions ->
+                        // Get the last completed session
+                        sessions.filter { it.endedAtEpochMs != null }
+                            .sortedByDescending { it.startedAtEpochMs }
+                            .firstOrNull()
+                    }
+                    .catch { e ->
+                        android.util.Log.e("HomeViewModel", "Error observing sessions: ${e.message}", e)
+                    }
+                    .collect { lastSession ->
+                        val lastFocusScore = lastSession?.focusAvg?.toInt()
+                        val lastSessionDate = lastSession?.let { 
+                            formatSessionDate(it.endedAtEpochMs ?: it.startedAtEpochMs) 
+                        }
+                        
+                        _uiState.value = _uiState.value.copy(
+                            lastFocusScore = lastFocusScore,
+                            lastSessionDate = lastSessionDate
+                        )
+                    }
+            } catch (e: Exception) {
+                android.util.Log.e("HomeViewModel", "Error observing last session: ${e.message}", e)
             }
         }
     }
