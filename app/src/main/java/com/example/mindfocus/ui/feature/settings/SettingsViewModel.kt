@@ -118,18 +118,6 @@ class SettingsViewModel(
         )
     }
 
-    fun onPrivacyPolicyClicked() {
-        viewModelScope.launch {
-            _events.emit(SettingsEvent.OpenUrl(context.getString(R.string.privacy_policy_url)))
-        }
-    }
-
-    fun onHelpAndSupportClicked() {
-        viewModelScope.launch {
-            _events.emit(SettingsEvent.OpenUrl(context.getString(R.string.support_center_url)))
-        }
-    }
-
     fun onDeleteAllDataClicked() {
         _uiState.update { it.copy(showDeleteConfirmation = true) }
     }

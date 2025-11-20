@@ -1,10 +1,7 @@
 package com.example.mindfocus.ui.feature.settings
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -17,7 +14,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Help
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocationOn
@@ -98,7 +94,6 @@ fun SettingsScreen(
         android.util.Log.d("SettingsScreen", "Fine location granted: $fineLocationGranted, Coarse location granted: $coarseLocationGranted")
 
         if (!fineLocationGranted && !coarseLocationGranted) {
-            // Permisiunile au fost refuzate, afișează mesaj
             android.util.Log.w("SettingsScreen", "Location permissions denied")
             coroutineScope.launch {
                 snackbarHostState.showSnackbar(
@@ -112,11 +107,6 @@ fun SettingsScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is SettingsEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is SettingsEvent.OpenUrl -> openExternalUrl(
-                    context = context,
-                    url = event.url,
-                    snackbarHostState = snackbarHostState
-                )
             }
         }
     }
@@ -235,11 +225,9 @@ fun SettingsScreen(
                                             isEnabled = settings.gpsEnabled,
                                             onCheckedChange = { enabled ->
                                                 android.util.Log.d("SettingsScreen", "GPS switch changed to: $enabled")
-                                                // Activează/dezactivează GPS-ul imediat (similar cu cameră)
                                                 viewModel.onGpsChanged(enabled)
                                                 
                                                 if (enabled) {
-                                                    // Verifică dacă permisiunile sunt deja acordate
                                                     val fineLocationGranted = ContextCompat.checkSelfPermission(
                                                         context,
                                                         Manifest.permission.ACCESS_FINE_LOCATION
@@ -252,7 +240,6 @@ fun SettingsScreen(
                                                     android.util.Log.d("SettingsScreen", "Current permissions - Fine: $fineLocationGranted, Coarse: $coarseLocationGranted")
 
                                                     if (!fineLocationGranted && !coarseLocationGranted) {
-                                                        // Cer permisiunile dacă nu sunt deja acordate
                                                         android.util.Log.d("SettingsScreen", "Requesting location permissions")
                                                         locationPermissionLauncher.launch(
                                                             arrayOf(
@@ -325,11 +312,6 @@ fun SettingsScreen(
                                     icon = Icons.Outlined.Lock,
                                     items = listOf(
                                         SettingsItem(
-                                            title = stringResource(R.string.privacy_policy),
-                                            icon = Icons.Outlined.Info,
-                                            onClick = viewModel::onPrivacyPolicyClicked
-                                        ),
-                                        SettingsItem(
                                             title = stringResource(R.string.delete_all_data),
                                             icon = Icons.Outlined.Delete,
                                             onClick = viewModel::onDeleteAllDataClicked
@@ -353,11 +335,6 @@ fun SettingsScreen(
                                                 uiState.appVersion
                                             ),
                                             icon = Icons.Outlined.Apps
-                                        ),
-                                        SettingsItem(
-                                            title = stringResource(R.string.help_and_support),
-                                            icon = Icons.Outlined.Help,
-                                            onClick = viewModel::onHelpAndSupportClicked
                                         )
                                     )
                                 ),
@@ -568,21 +545,3 @@ private fun DeleteConfirmationDialog(
         containerColor = colorResource(R.color.midnightblue)
     )
 }
-
-private suspend fun openExternalUrl(
-    context: android.content.Context,
-    url: String,
-    snackbarHostState: SnackbarHostState
-) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    try {
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        snackbarHostState.showSnackbar(
-            context.getString(R.string.settings_no_app_found)
-        )
-    }
-}
-

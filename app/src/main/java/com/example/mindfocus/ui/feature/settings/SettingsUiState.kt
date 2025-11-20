@@ -14,7 +14,6 @@ data class SettingsUiState(
 
 sealed interface SettingsEvent {
     data class ShowSnackbar(val message: String) : SettingsEvent
-    data class OpenUrl(val url: String) : SettingsEvent
 }
 
 
