@@ -105,7 +105,9 @@ class HistoryViewModel(
             ear = session.earAvg ?: 0.0,
             mar = session.marAvg ?: 0.0,
             headPose = session.headPitchAvgDegrees ?: 0.0,
-            scoreEvolution = scoreEvolution
+            scoreEvolution = scoreEvolution,
+            latitude = session.latitude,
+            longitude = session.longitude
         )
     }
 

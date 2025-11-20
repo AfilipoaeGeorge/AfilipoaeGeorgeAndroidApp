@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.History
@@ -129,6 +130,7 @@ fun HomeScreen(
                 LastFocusScoreCard(
                     focusScore = uiState.lastFocusScore,
                     lastSessionDate = uiState.lastSessionDate,
+                    lastSessionLocation = uiState.lastSessionLocation,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -192,6 +194,7 @@ fun HomeScreen(
 private fun LastFocusScoreCard(
     focusScore: Int?,
     lastSessionDate: String?,
+    lastSessionLocation: String?,
     modifier: Modifier = Modifier
 ) {
     val displayScore = focusScore ?: 0
@@ -250,6 +253,43 @@ private fun LastFocusScoreCard(
                 fontSize = 12.sp,
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.7f)
             )
+            
+            // Display location if available
+            if (lastSessionLocation != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = "Location",
+                        tint = colorResource(R.color.amber),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = lastSessionLocation,
+                        fontSize = 11.sp,
+                        color = colorResource(R.color.lightsteelblue).copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            } else {
+                // Show faded icon if no location
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = "Location not available",
+                        tint = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
