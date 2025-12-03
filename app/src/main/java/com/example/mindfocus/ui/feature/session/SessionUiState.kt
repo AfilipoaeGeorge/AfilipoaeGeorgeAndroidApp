@@ -17,7 +17,8 @@ data class SessionUiState(
 
 data class SessionAlert(
     val type: SessionAlertType,
-    val message: String
+    val message: String,
+    val timestamp: Long = System.currentTimeMillis()
 )
 
 enum class SessionAlertType {
