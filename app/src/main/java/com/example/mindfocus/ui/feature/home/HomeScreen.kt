@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ fun HomeScreen(
     onCalibrationClick: () -> Unit = {},
     onStartSessionClick: () -> Unit = {},
     onHistoryClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -186,6 +188,20 @@ fun HomeScreen(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            ActionButton(
+                icon = Icons.Outlined.Person,
+                title = stringResource(R.string.profile_button),
+                description = stringResource(R.string.profile_description),
+                onClick = onProfileClick,
+                gradientColors = listOf(
+                    colorResource(R.color.amber),
+                    colorResource(R.color.skyblue)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -276,7 +292,7 @@ private fun LastFocusScoreCard(
                     )
                 }
             } else {
-                // Show faded icon if no location
+                //show faded icon if no location
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

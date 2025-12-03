@@ -27,6 +27,38 @@
     <string name="start_session_description">Begin tracking your focus</string>
     <string name="history_button">History</string>
     <string name="history_description">View past sessions</string>
+    <string name="profile_button">Profile</string>
+    <string name="profile_description">View and edit your profile</string>
+    
+    <!-- Profile Screen -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_username_label">Username</string>
+    <string name="profile_email_label">Email</string>
+    <string name="profile_username_not_available">Not available</string>
+    <string name="profile_email_not_available">Not available</string>
+    <string name="profile_edit_username">Edit username</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="profile_change_picture">Change Profile Picture</string>
+    <string name="profile_take_photo">Take Photo</string>
+    <string name="profile_choose_from_gallery">Choose from Gallery</string>
+    <string name="profile_total_sessions">Total Sessions</string>
+    <string name="profile_avg_focus">Avg Focus</string>
+    <string name="profile_total_time">Total Time</string>
+    <string name="profile_member_since">Member Since</string>
+    <string name="profile_error_user_not_logged_in">User not logged in</string>
+    <string name="profile_error_failed_to_load">Failed to load profile: %1$s</string>
+    <string name="profile_error_username_empty">Username cannot be empty</string>
+    <string name="profile_error_username_exists">Username already exists. Please choose a different username.</string>
+    <string name="profile_error_user_not_found">User not found</string>
+    <string name="profile_error_failed_to_save_username">Failed to save username: %1$s</string>
+    <string name="profile_error_failed_to_save_picture">Failed to save profile picture: %1$s</string>
+    <string name="profile_success_username_updated">Username updated successfully</string>
+    <string name="profile_success_picture_updated">Profile picture updated successfully</string>
+    <string name="profile_picture_folder">Pictures/MindFocus</string>
+    <string name="profile_picture_description">Profile picture</string>
+    <string name="profile_change_picture_description">Change profile picture</string>
+    <string name="back_button">Back</string>
     
     <!-- Calibration Screen -->
     <string name="calibration_title">Calibration</string>

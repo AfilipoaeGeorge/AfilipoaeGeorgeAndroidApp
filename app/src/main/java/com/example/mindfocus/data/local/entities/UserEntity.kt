@@ -15,5 +15,6 @@ data class UserEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val email: String,
     val displayName: String,
+    val profilePictureUri: String? = null,
     val createdAtEpochMs: Long = System.currentTimeMillis()
 )
