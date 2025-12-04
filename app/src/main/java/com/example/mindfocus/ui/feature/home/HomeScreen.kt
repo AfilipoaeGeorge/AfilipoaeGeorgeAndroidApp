@@ -7,11 +7,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.outlined.ExitToApp
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ fun HomeScreen(
     onCalibrationClick: () -> Unit = {},
     onStartSessionClick: () -> Unit = {},
     onHistoryClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -80,7 +82,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.home_app_logo),
+                    text = stringResource(R.string.home_app_logo, stringResource(R.string.home_icon_brain)),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = colorResource(R.color.amber)
@@ -105,7 +107,7 @@ fun HomeScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.ExitToApp,
+                            imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
                             contentDescription = "Logout",
                             tint = colorResource(R.color.amber)
                         )
@@ -183,6 +185,20 @@ fun HomeScreen(
                 gradientColors = listOf(
                     colorResource(R.color.skyblue),
                     colorResource(R.color.amber)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            ActionButton(
+                icon = Icons.Outlined.Person,
+                title = stringResource(R.string.profile_button),
+                description = stringResource(R.string.profile_description),
+                onClick = onProfileClick,
+                gradientColors = listOf(
+                    colorResource(R.color.amber),
+                    colorResource(R.color.skyblue)
                 ),
                 modifier = Modifier.fillMaxWidth()
             )

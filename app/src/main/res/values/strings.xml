@@ -3,6 +3,7 @@
     <string name="app_name">MindFocus</string>
     
     <!-- Login Screen -->
+    <string name="login_icon_brain">🧠</string>
     <string name="login_title">Welcome Back</string>
     <string name="login_subtitle">Sign in to continue your focus journey</string>
     <string name="username_hint">Username</string>
@@ -18,7 +19,9 @@
     <string name="create_account_subtitle">Create your account to get started</string>
     
     <!-- Home Screen -->
-    <string name="home_app_logo">🧠 MindFocus</string>
+    <string name="home_icon_brain">🧠</string>
+    <string name="home_app_logo">%1$s MindFocus</string>
+    <string name="session_icon_bullet">•</string>
     <string name="last_focus_score">Last Focus Score</string>
     <string name="focus_score_max">/ 100</string>
     <string name="calibration_button">Calibration</string>
@@ -27,6 +30,43 @@
     <string name="start_session_description">Begin tracking your focus</string>
     <string name="history_button">History</string>
     <string name="history_description">View past sessions</string>
+    <string name="profile_button">Profile</string>
+    <string name="profile_description">View and edit your profile</string>
+    
+    <!-- Profile Screen -->
+    <string name="profile_icon_user">👤</string>
+    <string name="profile_icon_total_sessions">📊</string>
+    <string name="profile_icon_avg_focus">⭐</string>
+    <string name="profile_icon_total_time">⏱️</string>
+    <string name="profile_icon_member_since">📅</string>
+    <string name="profile_title">Profile</string>
+    <string name="profile_username_label">Username</string>
+    <string name="profile_email_label">Email</string>
+    <string name="profile_username_not_available">Not available</string>
+    <string name="profile_email_not_available">Not available</string>
+    <string name="profile_edit_username">Edit username</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="profile_change_picture">Change Profile Picture</string>
+    <string name="profile_take_photo">Take Photo</string>
+    <string name="profile_choose_from_gallery">Choose from Gallery</string>
+    <string name="profile_total_sessions">Total Sessions</string>
+    <string name="profile_avg_focus">Avg Focus</string>
+    <string name="profile_total_time">Total Time</string>
+    <string name="profile_member_since">Member Since</string>
+    <string name="profile_error_user_not_logged_in">User not logged in</string>
+    <string name="profile_error_failed_to_load">Failed to load profile: %1$s</string>
+    <string name="profile_error_username_empty">Username cannot be empty</string>
+    <string name="profile_error_username_exists">Username already exists. Please choose a different username.</string>
+    <string name="profile_error_user_not_found">User not found</string>
+    <string name="profile_error_failed_to_save_username">Failed to save username: %1$s</string>
+    <string name="profile_error_failed_to_save_picture">Failed to save profile picture: %1$s</string>
+    <string name="profile_success_username_updated">Username updated successfully</string>
+    <string name="profile_success_picture_updated">Profile picture updated successfully</string>
+    <string name="profile_picture_folder">Pictures/MindFocus</string>
+    <string name="profile_picture_description">Profile picture</string>
+    <string name="profile_change_picture_description">Change profile picture</string>
+    <string name="back_button">Back</string>
     
     <!-- Calibration Screen -->
     <string name="calibration_title">Calibration</string>
@@ -142,4 +182,54 @@
     <string name="settings_location_permission_denied">Location permission is required to enable GPS tracking</string>
     <string name="loading_location">Loading location...</string>
     <string name="location_not_available">Location not available</string>
+    
+    <!-- Tips Screen -->
+    <string name="tips_button">Tips &amp; Tutorial</string>
+    <string name="tips_button_description">Learn how to use the app effectively</string>
+    <string name="tips_title">Tips &amp; Tutorial</string>
+    <string name="tips_welcome_title">Welcome to MindFocus!</string>
+    <string name="tips_welcome_description">Follow these steps to get started and make the most out of your focus tracking experience. Each step will help you understand how to use the app effectively.</string>
+    <string name="tips_icon_welcome">💡</string>
+    <string name="tips_icon_step1">🎯</string>
+    <string name="tips_icon_step2">⚙️</string>
+    <string name="tips_icon_step3">▶️</string>
+    <string name="tips_icon_step4">📊</string>
+    <string name="tips_icon_alerts">🔔</string>
+    <string name="tips_icon_eyes_closed">👁️</string>
+    <string name="tips_icon_blink_rate">👋</string>
+    <string name="tips_icon_head_pose">👤</string>
+    <string name="tips_icon_yawn">😴</string>
+    <string name="tips_icon_low_focus">📉</string>
+    <string name="tips_icon_face_lost">📷</string>
+    <string name="tips_icon_delete_data">🗑️</string>
+    <string name="tips_icon_best_practices">⭐</string>
+    <string name="tips_icon_bullet">•</string>
+    <string name="tips_step">Step %1$d:</string>
+    <string name="tips_step1_title">Calibration</string>
+    <string name="tips_step1_description">Set up your baseline metrics</string>
+    <string name="tips_step1_details">Before starting your first session, calibrate the app. This allows MindFocus to learn your normal eye blinking rate, head position, and facial expressions. Go to Home → Calibration and sit naturally in front of your camera for about 1 minute. Make sure you have good lighting and your face is fully visible.</string>
+    <string name="tips_step2_title">Configure Settings</string>
+    <string name="tips_step2_description">Customize your monitoring preferences</string>
+    <string name="tips_step2_details">Visit Settings to enable camera monitoring and configure which alerts you want to receive. You can enable or disable alerts for eyes closed, low blink rate, head pose deviation, yawns, and low focus score. Enable GPS if you want to track where your sessions take place.</string>
+    <string name="tips_step3_title">Start a Session</string>
+    <string name="tips_step3_description">Begin tracking your focus</string>
+    <string name="tips_step3_details">Once calibrated, you can start your first focus session. Go to Home → Start Session. The app will monitor your focus score in real-time based on your eye movements, blinking frequency, and head position. You can pause or stop the session at any time. The focus score ranges from 0-100, with higher scores indicating better focus.</string>
+    <string name="tips_step4_title">Review Your History</string>
+    <string name="tips_step4_description">Analyze your progress over time</string>
+    <string name="tips_step4_details">After completing sessions, check your History to see past sessions, average focus scores, duration, and focus score evolution graphs. This helps you understand your focus patterns and track improvement over time. You can also delete old sessions if needed.</string>
+    <string name="tips_alerts_title">Understanding Alerts</string>
+    <string name="tips_alert_eyes_closed">Eyes Closed: Activates when your EAR (Eye Aspect Ratio) drops below 70% of your baseline for 3 consecutive seconds</string>
+    <string name="tips_alert_blink_rate">Low Blink Rate: Activates if you haven\'t blinked for 60 seconds, or if you blinked less than 5 times in the last 60 seconds. A blink is detected when your EAR drops below 80% of your baseline</string>
+    <string name="tips_alert_head_pose">Head Pose: Activates when your head angle deviates 25 degrees or more from your baseline position for 10 consecutive seconds</string>
+    <string name="tips_alert_yawn">Repeated Yawn: Activates when 3 or more yawns are detected within a 5-minute window. A yawn is detected when your MAR (Mouth Aspect Ratio) exceeds a threshold based on your baseline</string>
+    <string name="tips_alert_low_focus">Low Focus: Activates when your focus score remains below 60 for 5 consecutive minutes during a session</string>
+    <string name="tips_alert_face_lost">Face Lost: Session pauses automatically if your face is not detected by the camera for 2 consecutive seconds</string>
+    <string name="tips_best_practices_title">Best Practices</string>
+    <string name="tips_practice_lighting">Ensure good lighting so the camera can clearly see your face</string>
+    <string name="tips_practice_distance">Sit at a comfortable distance from your device (about 50-70 cm)</string>
+    <string name="tips_practice_breaks">Take regular breaks every 45-60 minutes for best results</string>
+    <string name="tips_practice_consistency">Use the app consistently to get accurate baseline measurements and better insights</string>
+    <string name="tips_delete_data_title">Delete All Data</string>
+    <string name="tips_delete_data_description">Understand what happens when you delete your data</string>
+    <string name="tips_delete_data_details">The \"Delete All Data\" option in Settings allows you to permanently remove all your data from the app. This includes: all session records, all metrics and measurements, your calibration baseline, and all settings (which will be reset to defaults). This action cannot be undone, so make sure you really want to delete everything before confirming. After deletion, you\'ll need to recalibrate and start fresh.</string>
 </resources>

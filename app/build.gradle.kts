@@ -94,8 +94,9 @@ dependencies {
     // Google Play Services Location
     implementation("com.google.android.gms:play-services-location:21.3.0")
     
-    // Kotlin Coroutines support for Google Play Services
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
+
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     testImplementation("androidx.room:room-testing:2.8.3")
 

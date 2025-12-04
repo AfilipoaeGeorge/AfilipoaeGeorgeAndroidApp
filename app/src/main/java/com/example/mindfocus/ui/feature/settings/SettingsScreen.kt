@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Delete
@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,6 +59,7 @@ data class SettingsItem(
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit = {},
+    onTipsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -150,7 +152,7 @@ fun SettingsScreen(
                             onClick = onNavigateBack
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
                                 tint = colorResource(R.color.amber)
                             )
@@ -329,6 +331,12 @@ fun SettingsScreen(
                                     icon = Icons.Outlined.Info,
                                     items = listOf(
                                         SettingsItem(
+                                            title = stringResource(R.string.tips_button),
+                                            description = stringResource(R.string.tips_button_description),
+                                            icon = Icons.Outlined.Lightbulb,
+                                            onClick = onTipsClick
+                                        ),
+                                        SettingsItem(
                                             title = stringResource(R.string.app_version),
                                             description = stringResource(
                                                 R.string.app_version_label,
@@ -403,7 +411,7 @@ private fun SettingsSectionCard(
                 )
             }
             
-            Divider(
+            HorizontalDivider(
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                 thickness = 1.dp
             )

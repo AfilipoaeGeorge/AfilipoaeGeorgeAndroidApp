@@ -7,6 +7,8 @@ sealed class NavRoute(val route: String) {
     object Calibration : NavRoute("calibration")
     object Session : NavRoute("session")
     object History : NavRoute("history")
+    object Profile : NavRoute("profile")
     object Settings : NavRoute("settings")
+    object Tips : NavRoute("tips")
 }
 

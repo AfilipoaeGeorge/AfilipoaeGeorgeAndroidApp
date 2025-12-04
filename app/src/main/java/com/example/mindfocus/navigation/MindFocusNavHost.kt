@@ -9,8 +9,10 @@ import com.example.mindfocus.ui.feature.calibration.CalibrationScreen
 import com.example.mindfocus.ui.feature.history.HistoryScreen
 import com.example.mindfocus.ui.feature.home.HomeScreen
 import com.example.mindfocus.ui.feature.login.LoginScreen
+import com.example.mindfocus.ui.feature.profile.ProfileScreen
 import com.example.mindfocus.ui.feature.session.SessionScreen
 import com.example.mindfocus.ui.feature.settings.SettingsScreen
+import com.example.mindfocus.ui.feature.tips.TipsScreen
 
 @Composable
 fun MindFocusNavHost(
@@ -44,6 +46,9 @@ fun MindFocusNavHost(
                 },
                 onHistoryClick = {
                     navController.navigate(NavRoute.History.route)
+                },
+                onProfileClick = {
+                    navController.navigate(NavRoute.Profile.route)
                 },
                 onSettingsClick = {
                     navController.navigate(NavRoute.Settings.route)
@@ -107,8 +112,29 @@ fun MindFocusNavHost(
             )
         }
         
+        composable(route = NavRoute.Profile.route) {
+            ProfileScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                modifier = Modifier
+            )
+        }
+        
         composable(route = NavRoute.Settings.route) {
             SettingsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onTipsClick = {
+                    navController.navigate(NavRoute.Tips.route)
+                },
+                modifier = Modifier
+            )
+        }
+        
+        composable(route = NavRoute.Tips.route) {
+            TipsScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
