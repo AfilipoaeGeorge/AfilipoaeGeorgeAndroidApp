@@ -178,7 +178,7 @@ private fun LoginHeader(isRegisterMode: Boolean) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "🧠",
+                    text = stringResource(R.string.login_icon_brain),
                     fontSize = 48.sp
                 )
             }

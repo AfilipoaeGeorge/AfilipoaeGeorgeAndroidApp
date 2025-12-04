@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
@@ -327,7 +327,7 @@ private fun AnimatedProfileAvatar(
                 )
             } else {
                 Text(
-                    text = "👤",
+                    text = stringResource(R.string.profile_icon_user),
                     fontSize = 70.sp,
                     modifier = Modifier
                         .scale(1f + (scale - 1f) * 0.3f)
@@ -406,7 +406,7 @@ private fun AnimatedProfileCard(
                 viewModel = viewModel
             )
             
-            Divider(
+            HorizontalDivider(
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                 thickness = 1.dp
             )
@@ -655,7 +655,7 @@ private fun AnimatedHeader(
                 modifier = Modifier.scale(1f + (titleScale - 1f) * 0.3f)
             ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back_button),
                             tint = colorResource(R.color.amber)
                         )
@@ -817,14 +817,14 @@ private fun ProfileStatisticsCards(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StatisticCard(
-                icon = "📊",
+                icon = stringResource(R.string.profile_icon_total_sessions),
                 label = stringResource(R.string.profile_total_sessions),
                 value = uiState.totalSessions.toString(),
                 modifier = Modifier.weight(1f)
             )
             
             StatisticCard(
-                icon = "⭐",
+                icon = stringResource(R.string.profile_icon_avg_focus),
                 label = stringResource(R.string.profile_avg_focus),
                 value = if (uiState.averageFocusScore != null) {
                     String.format("%.0f", uiState.averageFocusScore)
@@ -841,7 +841,7 @@ private fun ProfileStatisticsCards(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StatisticCard(
-                icon = "⏱️",
+                icon = stringResource(R.string.profile_icon_total_time),
                 label = stringResource(R.string.profile_total_time),
                 value = formatTime(uiState.totalSessionTime),
                 modifier = Modifier.weight(1f)
@@ -849,7 +849,7 @@ private fun ProfileStatisticsCards(
             
             if (uiState.accountCreatedDate != null) {
                 StatisticCard(
-                    icon = "📅",
+                    icon = stringResource(R.string.profile_icon_member_since),
                     label = stringResource(R.string.profile_member_since),
                     value = uiState.accountCreatedDate,
                     modifier = Modifier.weight(1f)

@@ -15,7 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -183,7 +183,6 @@ fun SessionScreen(
     val imageAnalysis = ImageAnalysis.Builder()
         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-        .setTargetResolution(android.util.Size(640, 480))
         .build()
     
     LaunchedEffect(lensFacing.value, hasCameraPermission, uiState.cameraMonitoringEnabled) {
@@ -253,7 +252,7 @@ fun SessionScreen(
                         onClick = onNavigateBack
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = colorResource(R.color.amber)
                         )
@@ -655,7 +654,7 @@ private fun SessionAlertsCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "•",
+                        text = stringResource(R.string.session_icon_bullet),
                         fontSize = 18.sp,
                         color = colorResource(R.color.coralred),
                         fontWeight = FontWeight.Bold

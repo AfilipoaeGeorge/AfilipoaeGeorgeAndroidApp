@@ -12,6 +12,7 @@ import com.example.mindfocus.ui.feature.login.LoginScreen
 import com.example.mindfocus.ui.feature.profile.ProfileScreen
 import com.example.mindfocus.ui.feature.session.SessionScreen
 import com.example.mindfocus.ui.feature.settings.SettingsScreen
+import com.example.mindfocus.ui.feature.tips.TipsScreen
 
 @Composable
 fun MindFocusNavHost(
@@ -122,6 +123,18 @@ fun MindFocusNavHost(
         
         composable(route = NavRoute.Settings.route) {
             SettingsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onTipsClick = {
+                    navController.navigate(NavRoute.Tips.route)
+                },
+                modifier = Modifier
+            )
+        }
+        
+        composable(route = NavRoute.Tips.route) {
+            TipsScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 },

@@ -9,5 +9,6 @@ sealed class NavRoute(val route: String) {
     object History : NavRoute("history")
     object Profile : NavRoute("profile")
     object Settings : NavRoute("settings")
+    object Tips : NavRoute("tips")
 }
 

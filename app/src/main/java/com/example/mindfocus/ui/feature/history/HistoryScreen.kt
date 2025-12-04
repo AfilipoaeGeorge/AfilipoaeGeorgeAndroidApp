@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
@@ -108,7 +108,7 @@ fun HistoryScreen(
                         onClick = onNavigateBack
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = colorResource(R.color.amber)
                         )
@@ -345,7 +345,7 @@ private fun SessionHistoryCard(
                 }
             }
             
-            Divider(
+            HorizontalDivider(
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                 thickness = 1.dp
             )
@@ -359,7 +359,7 @@ private fun SessionHistoryCard(
                 MetricItem(label = stringResource(R.string.head_pose_label), value = String.format("%.1f°", session.headPose))
             }
             
-            Divider(
+            HorizontalDivider(
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                 thickness = 1.dp
             )
@@ -413,7 +413,7 @@ private fun SessionHistoryCard(
                         )
                     }
 
-                    Divider(
+                    HorizontalDivider(
                         color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                         thickness = 1.dp
                     )
@@ -437,7 +437,7 @@ private fun SessionHistoryCard(
                             fontWeight = FontWeight.Medium
                         )
                     }
-                    Divider(
+                    HorizontalDivider(
                         color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                         thickness = 1.dp
                     )
@@ -462,7 +462,7 @@ private fun SessionHistoryCard(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                Divider(
+                HorizontalDivider(
                     color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
                     thickness = 1.dp
                 )
