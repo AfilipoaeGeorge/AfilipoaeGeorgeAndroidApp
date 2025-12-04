@@ -270,7 +270,6 @@ private fun LastFocusScoreCard(
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.7f)
             )
             
-            // Display location if available
             if (lastSessionLocation != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -292,7 +291,6 @@ private fun LastFocusScoreCard(
                     )
                 }
             } else {
-                //show faded icon if no location
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

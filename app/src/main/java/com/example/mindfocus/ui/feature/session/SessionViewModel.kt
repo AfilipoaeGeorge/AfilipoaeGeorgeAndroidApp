@@ -41,6 +41,7 @@ class SessionViewModel(
 
     private var timerJob: Job? = null
     private var saveMetricsJob: Job? = null
+    private var alertAutoDismissJob: Job? = null
     private var lastVibrationTime = 0L
 
     private val metricsBuffer = ArrayDeque<Triple<Double, Double, Double>>()
@@ -184,6 +185,7 @@ class SessionViewModel(
         lastBlinkTimestamp = System.currentTimeMillis()
         startTimer()
         startPeriodicMetricSaving()
+        startAlertAutoDismiss()
         _uiState.value = _uiState.value.copy(isPaused = false, isRunning = true)
     }
 
@@ -209,6 +211,23 @@ class SessionViewModel(
                 delay(saveIntervalSeconds * 1000)
                 if (!_uiState.value.isPaused && accumulatedMetrics.isNotEmpty()) {
                     saveAccumulatedMetrics()
+                }
+            }
+        }
+    }
+    
+    private fun startAlertAutoDismiss() {
+        alertAutoDismissJob?.cancel()
+        alertAutoDismissJob = viewModelScope.launch {
+            while (_uiState.value.isRunning) {
+                delay(500) // check every 500ms
+                val now = System.currentTimeMillis()
+                val alertsToRemove = activeAlerts.values.filter { alert ->
+                    alert.type != SessionAlertType.FACE_LOST && 
+                    (now - alert.timestamp) >= 5000L // 5 seconds
+                }
+                alertsToRemove.forEach { alert ->
+                    removeAlert(alert.type)
                 }
             }
         }
@@ -604,13 +623,14 @@ class SessionViewModel(
         }
 
         val wasPresent = activeAlerts.containsKey(type)
-        activeAlerts[type] = SessionAlert(type, message)
         if (!wasPresent) {
+            activeAlerts[type] = SessionAlert(type, message, System.currentTimeMillis())
             publishAlerts()
             if (!isUserPaused) {
                 triggerVibration()
             }
         }
+        // if alert already exists, don't update it (keep original timestamp for auto-dismiss)
     }
 
     private fun removeAlert(type: SessionAlertType) {
@@ -842,6 +862,7 @@ class SessionViewModel(
                 publishAlerts()
                 timerJob?.cancel()
                 saveMetricsJob?.cancel()
+                alertAutoDismissJob?.cancel()
                 metricsBuffer.clear()
                 accumulatedMetrics.clear()
                 metricsPerBucket.clear()
@@ -862,5 +883,6 @@ class SessionViewModel(
         }
         timerJob?.cancel()
         saveMetricsJob?.cancel()
+        alertAutoDismissJob?.cancel()
     }
 }
