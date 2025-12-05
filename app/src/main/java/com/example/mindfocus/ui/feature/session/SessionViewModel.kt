@@ -493,6 +493,7 @@ class SessionViewModel(
                         blinkInProgress = true
                         blinkTimestamps.addLast(now)
                         lastBlinkTimestamp = now
+                        removeAlert(SessionAlertType.LOW_BLINK_RATE)
                     }
                 } else {
                     blinkInProgress = false
@@ -630,7 +631,6 @@ class SessionViewModel(
                 triggerVibration()
             }
         }
-        // if alert already exists, don't update it (keep original timestamp for auto-dismiss)
     }
 
     private fun removeAlert(type: SessionAlertType) {

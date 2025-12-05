@@ -16,6 +16,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 object AuthPreferencesKeys {
     val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     val USER_ID = longPreferencesKey("user_id")
+    val PREFERRED_USER_ID = longPreferencesKey("preferred_user_id")
 }
 
 class AuthPreferencesManager(private val context: Context) {
@@ -43,6 +44,20 @@ class AuthPreferencesManager(private val context: Context) {
 
     suspend fun getCurrentUserId(): Long? {
         return context.dataStore.data.first()[AuthPreferencesKeys.USER_ID]
+    }
+    
+    suspend fun getPreferredUserId(): Long? {
+        return context.dataStore.data.first()[AuthPreferencesKeys.PREFERRED_USER_ID]
+    }
+    
+    suspend fun setPreferredUserId(userId: Long?) {
+        context.dataStore.edit { preferences ->
+            if (userId != null) {
+                preferences[AuthPreferencesKeys.PREFERRED_USER_ID] = userId
+            } else {
+                preferences.remove(AuthPreferencesKeys.PREFERRED_USER_ID)
+            }
+        }
     }
 }
 

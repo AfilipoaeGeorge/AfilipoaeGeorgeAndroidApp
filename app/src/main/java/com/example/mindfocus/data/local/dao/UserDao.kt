@@ -23,6 +23,12 @@ interface UserDao {
     @Query("SELECT * FROM users ORDER BY createdAtEpochMs DESC")
     fun observeAll(): Flow<List<UserEntity>>
 
+    @Query("SELECT COUNT(*) FROM users")
+    suspend fun getCount(): Int
+
+    @Query("DELETE FROM users WHERE id = :id")
+    suspend fun delete(id: Long)
+
     @Query("DELETE FROM users")
     suspend fun deleteAll()
 }

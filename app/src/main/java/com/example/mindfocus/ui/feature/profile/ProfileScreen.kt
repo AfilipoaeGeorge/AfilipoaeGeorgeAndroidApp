@@ -11,15 +11,19 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
@@ -29,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,6 +55,7 @@ import com.example.mindfocus.data.repository.UserRepository
 @Composable
 fun ProfileScreen(
     onNavigateBack: () -> Unit = {},
+    onAccountDeleted: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -65,6 +71,7 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     
     var showImageSourceDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     
     val hasCameraPermission = remember {
@@ -137,7 +144,8 @@ fun ProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //animated Header
@@ -146,7 +154,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             if (uiState.isLoading) {
                 Box(
@@ -164,7 +172,7 @@ fun ProfileScreen(
                 AnimatedProfileAvatar(
                     profilePictureUri = uiState.profilePictureUri,
                     onImageClick = ::handleImageClick,
-                    modifier = Modifier.padding(bottom = 32.dp)
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
                 
                 //Image Source Dialog
@@ -192,10 +200,11 @@ fun ProfileScreen(
                 AnimatedProfileCard(
                     uiState = uiState,
                     viewModel = viewModel,
+                    onDeleteAccountClick = { showDeleteAccountDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 )
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 
                 //Statistics Cards
                 ProfileStatisticsCards(
@@ -222,7 +231,19 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+        
+        if (showDeleteAccountDialog) {
+            DeleteAccountConfirmationDialog(
+                onConfirm = {
+                    showDeleteAccountDialog = false
+                    viewModel.deleteAccount(onAccountDeleted)
+                },
+                onDismiss = { showDeleteAccountDialog = false }
+            )
         }
     }
 }
@@ -275,7 +296,7 @@ private fun AnimatedProfileAvatar(
         //Animated gradient background circles with rotation
         Box(
             modifier = Modifier
-                .size(160.dp)
+                .size(120.dp)
                 .scale(scale)
                 .background(
                     Brush.radialGradient(
@@ -292,7 +313,7 @@ private fun AnimatedProfileAvatar(
         //Main avatar circle with gradient or image
         Box(
             modifier = Modifier
-                .size(130.dp)
+                .size(100.dp)
                 .scale(scale)
                 .clip(CircleShape)
                 .background(
@@ -328,7 +349,7 @@ private fun AnimatedProfileAvatar(
             } else {
                 Text(
                     text = stringResource(R.string.profile_icon_user),
-                    fontSize = 70.sp,
+                    fontSize = 50.sp,
                     modifier = Modifier
                         .scale(1f + (scale - 1f) * 0.3f)
                 )
@@ -338,20 +359,20 @@ private fun AnimatedProfileAvatar(
         //Camera icon button overlay
         Box(
             modifier = Modifier
-                .size(130.dp)
-                .offset(x = 45.dp, y = 45.dp),
+                .size(100.dp)
+                .offset(x = 35.dp, y = 35.dp),
             contentAlignment = Alignment.Center
         ) {
             FloatingActionButton(
                 onClick = onImageClick,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(32.dp),
                 containerColor = colorResource(R.color.amber),
                 contentColor = Color.White
             ) {
                 Icon(
                     imageVector = Icons.Outlined.CameraAlt,
                     contentDescription = stringResource(R.string.profile_change_picture_description),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -363,6 +384,7 @@ private fun AnimatedProfileAvatar(
 private fun AnimatedProfileCard(
     uiState: ProfileUiState,
     viewModel: ProfileViewModel,
+    onDeleteAccountClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     //Fade in animation
@@ -397,8 +419,8 @@ private fun AnimatedProfileCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             //Username Section
             AnimatedUsernameSection(
@@ -414,6 +436,15 @@ private fun AnimatedProfileCard(
             //Email Section
             AnimatedEmailSection(
                 email = uiState.email
+            )
+            
+            HorizontalDivider(
+                color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                thickness = 1.dp
+            )
+            
+            DeleteAccountSection(
+                onClick = onDeleteAccountClick
             )
         }
     }
@@ -464,12 +495,12 @@ private fun AnimatedUsernameSection(
                     contentDescription = null,
                     tint = colorResource(R.color.amber),
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(20.dp)
                         .scale(iconScale)
                 )
                 Text(
                     text = stringResource(R.string.profile_username_label),
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     color = colorResource(R.color.lightsteelblue),
                     fontWeight = FontWeight.Medium
                 )
@@ -478,13 +509,13 @@ private fun AnimatedUsernameSection(
             if (!uiState.isEditingUsername) {
                 IconButton(
                     onClick = { viewModel.startEditingUsername() },
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = stringResource(R.string.profile_edit_username),
                         tint = colorResource(R.color.amber),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -538,7 +569,7 @@ private fun AnimatedUsernameSection(
         } else {
             Text(
                 text = uiState.username ?: stringResource(R.string.profile_username_not_available),
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = colorResource(R.color.amber)
             )
@@ -585,12 +616,12 @@ private fun AnimatedEmailSection(
                 contentDescription = null,
                 tint = colorResource(R.color.amber),
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(20.dp)
                     .scale(iconScale)
             )
             Text(
                 text = stringResource(R.string.profile_email_label),
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 color = colorResource(R.color.lightsteelblue),
                 fontWeight = FontWeight.Medium
             )
@@ -598,7 +629,7 @@ private fun AnimatedEmailSection(
         
         Text(
             text = email ?: stringResource(R.string.profile_email_not_available),
-            fontSize = 18.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = colorResource(R.color.amber)
         )
@@ -642,7 +673,7 @@ private fun AnimatedHeader(
         modifier = modifier
             .alpha(alpha)
             .offset(y = slideOffset.dp)
-            .padding(vertical = 16.dp),
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -662,7 +693,7 @@ private fun AnimatedHeader(
             }
             Text(
                 text = stringResource(R.string.profile_title),
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = colorResource(R.color.amber),
                 modifier = Modifier.scale(titleScale)
@@ -809,12 +840,12 @@ private fun ProfileStatisticsCards(
     
     Column(
         modifier = modifier.alpha(alpha),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         //Statistics Row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StatisticCard(
                 icon = stringResource(R.string.profile_icon_total_sessions),
@@ -838,7 +869,7 @@ private fun ProfileStatisticsCards(
         //Time and Account Info Row
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StatisticCard(
                 icon = stringResource(R.string.profile_icon_total_time),
@@ -880,7 +911,7 @@ private fun StatisticCard(
     
     Card(
         modifier = modifier.scale(scale),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = colorResource(R.color.midnightblue).copy(alpha = 0.9f)
         ),
@@ -889,23 +920,23 @@ private fun StatisticCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
                 text = icon,
-                fontSize = 32.sp
+                fontSize = 24.sp
             )
             Text(
                 text = value,
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = colorResource(R.color.amber)
             )
             Text(
                 text = label,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.8f),
                 textAlign = TextAlign.Center
             )
@@ -913,11 +944,163 @@ private fun StatisticCard(
     }
 }
 
-private fun formatTime(minutes: Long): String {
+private fun formatTime(seconds: Long): String {
     return when {
-        minutes < 60 -> "${minutes}m"
-        minutes < 1440 -> "${minutes / 60}h"
-        else -> "${minutes / 1440}d"
+        seconds < 60 -> "${seconds}s"
+        seconds < 3600 -> {
+            val minutes = seconds / 60
+            val remainingSeconds = seconds % 60
+            if (remainingSeconds > 0) {
+                "${minutes}m ${remainingSeconds}s"
+            } else {
+                "${minutes}m"
+            }
+        }
+        seconds < 86400 -> {
+            val hours = seconds / 3600
+            val remainingMinutes = (seconds % 3600) / 60
+            if (remainingMinutes > 0) {
+                "${hours}h ${remainingMinutes}m"
+            } else {
+                "${hours}h"
+            }
+        }
+        else -> {
+            val days = seconds / 86400
+            val remainingHours = (seconds % 86400) / 3600
+            if (remainingHours > 0) {
+                "${days}d ${remainingHours}h"
+            } else {
+                "${days}d"
+            }
+        }
     }
 }
 
+@Composable
+private fun DeleteAccountSection(
+    onClick: () -> Unit
+) {
+    var visible by remember { mutableStateOf(false) }
+    val sectionAlpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(600, delayMillis = 600, easing = FastOutSlowInEasing),
+        label = "delete_section_fade"
+    )
+    
+    val infiniteTransition = rememberInfiniteTransition(label = "delete_icon_animation")
+    val iconScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "delete_icon_scale"
+    )
+    
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+    
+    Column(
+        modifier = Modifier.alpha(sectionAlpha),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    tint = colorResource(R.color.coralred),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .scale(iconScale)
+                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_delete_account),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorResource(R.color.coralred)
+                    )
+                    Text(
+                        text = stringResource(R.string.profile_delete_account_hint),
+                        fontSize = 11.sp,
+                        color = colorResource(R.color.lightsteelblue).copy(alpha = 0.7f)
+                    )
+                }
+            }
+            
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = colorResource(R.color.coralred).copy(alpha = 0.6f),
+                modifier = Modifier
+                    .size(20.dp)
+                    .rotate(180f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.profile_delete_account_confirmation_title),
+                fontWeight = FontWeight.Bold,
+                color = colorResource(R.color.coralred)
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.profile_delete_account_confirmation_message),
+                color = colorResource(R.color.lightsteelblue)
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colorResource(R.color.coralred)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.profile_delete_account_confirm),
+                    color = Color.White
+                )
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = colorResource(R.color.lightsteelblue)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(stringResource(R.string.profile_delete_account_cancel))
+            }
+        },
+        containerColor = colorResource(R.color.midnightblue).copy(alpha = 0.95f),
+        shape = RoundedCornerShape(20.dp)
+    )
+}

@@ -8,7 +8,7 @@ data class ProfileUiState(
     val accountCreatedDate: String? = null,
     val totalSessions: Int = 0,
     val averageFocusScore: Double? = null,
-    val totalSessionTime: Long = 0, // in minutes
+    val totalSessionTime: Long = 0, // in seconds (for accurate calculation including seconds)
     val isEditingUsername: Boolean = false,
     val newUsername: String = "",
     val errorMessage: String? = null,
