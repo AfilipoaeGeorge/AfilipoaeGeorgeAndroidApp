@@ -15,4 +15,8 @@ class UserRepository(private val db: MindFocusDatabase) {
     suspend fun getByUsername(username: String): UserEntity? = db.userDao().getByUsername(username)
 
     fun observeAll(): Flow<List<UserEntity>> = db.userDao().observeAll()
+    
+    suspend fun getCount(): Int = db.userDao().getCount()
+    
+    suspend fun delete(id: Long) = db.userDao().delete(id)
 }

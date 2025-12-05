@@ -120,6 +120,8 @@ fun TipsScreen(
                 
                 TipsDeleteDataCard()
                 
+                TipsDeleteAccountCard()
+                
                 TipsBestPracticesCard()
             }
         }
@@ -440,6 +442,77 @@ private fun TipsDeleteDataCard() {
             
             Text(
                 text = stringResource(R.string.tips_delete_data_details),
+                fontSize = 13.sp,
+                color = colorResource(R.color.lightsteelblue).copy(alpha = 0.8f),
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun TipsDeleteAccountCard() {
+    var visible by remember { mutableStateOf(false) }
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(600, delayMillis = 700, easing = FastOutSlowInEasing),
+        label = "delete_account_fade"
+    )
+    
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(alpha),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colorResource(R.color.midnightblue).copy(alpha = 0.9f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.tips_icon_delete_account),
+                    fontSize = 28.sp
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.tips_delete_account_title),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorResource(R.color.coralred)
+                    )
+                    Text(
+                        text = stringResource(R.string.tips_delete_account_description),
+                        fontSize = 14.sp,
+                        color = colorResource(R.color.lightsteelblue),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            
+            HorizontalDivider(
+                color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                thickness = 1.dp
+            )
+            
+            Text(
+                text = stringResource(R.string.tips_delete_account_details),
                 fontSize = 13.sp,
                 color = colorResource(R.color.lightsteelblue).copy(alpha = 0.8f),
                 lineHeight = 18.sp

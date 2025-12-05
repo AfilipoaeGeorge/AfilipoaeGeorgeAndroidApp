@@ -56,7 +56,7 @@ class ProfileViewModel(
                 
                 val totalSessionTime = completedSessions.sumOf { session ->
                     val duration = (session.endedAtEpochMs ?: 0) - session.startedAtEpochMs
-                    duration / (1000 * 60) //convert to minutes
+                    duration / 1000 // convert to seconds (not minutes) to preserve accuracy
                 }
                 
                 val accountCreatedDate = user?.createdAtEpochMs?.let {
@@ -218,6 +218,36 @@ class ProfileViewModel(
                 android.util.Log.e("ProfileViewModel", "Error saving profile picture: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
                     errorMessage = context.getString(R.string.profile_error_failed_to_save_picture, e.message ?: "Unknown error")
+                )
+            }
+        }
+    }
+
+    fun deleteAccount(onAccountDeleted: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                val userId = authPreferencesManager.getCurrentUserId()
+                if (userId == null) {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = context.getString(R.string.profile_error_user_not_logged_in)
+                    )
+                    return@launch
+                }
+
+                val preferredUserId = authPreferencesManager.getPreferredUserId()
+                if (preferredUserId == userId) {
+                    authPreferencesManager.setPreferredUserId(null)
+                }
+
+                userRepository.delete(userId)
+
+                authPreferencesManager.setLoggedOut()
+
+                onAccountDeleted()
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileViewModel", "Error deleting account: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = context.getString(R.string.profile_error_failed_to_delete_account, e.message ?: "Unknown error")
                 )
             }
         }

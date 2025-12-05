@@ -1,14 +1,20 @@
 package com.example.mindfocus.ui.feature.login
 
 import android.content.Context
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +29,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.example.mindfocus.R
 import com.example.mindfocus.core.datastore.AuthPreferencesManager
 import com.example.mindfocus.data.local.MindFocusDatabase
@@ -34,6 +42,7 @@ fun LoginScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val activity = context as? FragmentActivity
     val authPreferencesManager = remember { AuthPreferencesManager(context) }
     val database = remember { MindFocusDatabase.getInstance(context.applicationContext) }
     val userRepository = remember { UserRepository(database) }
@@ -43,11 +52,31 @@ fun LoginScreen(
     }
     
     val uiState by viewModel.uiState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    
+    LaunchedEffect(Unit) {
+        viewModel.resetBiometricState()
+    }
     
     LaunchedEffect(uiState.isLoginSuccessful) {
         if (uiState.isLoginSuccessful) {
             onLoginSuccess()
         }
+    }
+    
+    if (uiState.showUserSelection && uiState.availableUsers.isNotEmpty()) {
+        com.example.mindfocus.ui.feature.login.UserSelectionDialog(
+            users = uiState.availableUsers,
+            selectedUserId = uiState.selectedUserId,
+            onUserSelected = { userId ->
+                activity?.let {
+                    viewModel.authenticateWithSelectedUser(userId, it) { _ -> onLoginSuccess() }
+                }
+            },
+            onDismiss = {
+                viewModel.dismissUserSelection()
+            }
+        )
     }
     
     LoginContent(
@@ -56,6 +85,11 @@ fun LoginScreen(
         onEmailChange = { viewModel.updateEmail(it) },
         onLoginClick = { viewModel.login { _ -> onLoginSuccess() } },
         onRegisterClick = { viewModel.toggleRegisterMode() },
+        onBiometricClick = {
+            activity?.let {
+                viewModel.authenticateWithBiometric(it) { _ -> onLoginSuccess() }
+            }
+        },
         modifier = modifier
     )
 }
@@ -67,6 +101,7 @@ private fun LoginContent(
     onEmailChange: (String) -> Unit,
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit,
+    onBiometricClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -88,11 +123,11 @@ private fun LoginContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(40.dp))
             
             LoginHeader(isRegisterMode = uiState.isRegisterMode)
             
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             
             Card(
                 modifier = Modifier
@@ -107,8 +142,8 @@ private fun LoginContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     LoginTextField(
                         value = uiState.username,
@@ -133,12 +168,10 @@ private fun LoginContent(
                         Text(
                             text = uiState.errorMessage,
                             color = colorResource(R.color.coralred),
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(start = 4.dp)
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp)
                         )
                     }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
                     
                     LoginButton(
                         onClick = onLoginClick,
@@ -147,13 +180,25 @@ private fun LoginContent(
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
                     RegisterLink(
                         onClick = onRegisterClick,
                         isRegisterMode = uiState.isRegisterMode,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    
+                    if (!uiState.isRegisterMode && uiState.isBiometricAvailable) {
+                        HorizontalDivider(
+                            color = colorResource(R.color.lightsteelblue).copy(alpha = 0.3f),
+                            thickness = 1.dp,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        
+                        SelectAccountButton(
+                            onClick = onBiometricClick,
+                            isLoading = uiState.isBiometricAuthenticating,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -255,7 +300,7 @@ private fun LoginButton(
     Button(
         onClick = onClick,
         modifier = modifier
-            .height(56.dp)
+            .height(50.dp)
             .clip(RoundedCornerShape(16.dp)),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent
@@ -286,7 +331,7 @@ private fun LoginButton(
             } else {
                 Text(
                     text = if (isRegisterMode) stringResource(R.string.register_button) else stringResource(R.string.login_button),
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -303,7 +348,8 @@ private fun RegisterLink(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 8.dp)
     ) {
         Text(
             text = if (isRegisterMode) {
@@ -312,8 +358,112 @@ private fun RegisterLink(
                 stringResource(R.string.register_link)
             },
             color = colorResource(R.color.skyblue),
-            fontSize = 14.sp
+            fontSize = 13.sp
         )
+    }
+}
+
+@Composable
+private fun BiometricButton(
+    onClick: () -> Unit,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+            .height(56.dp)
+            .clip(RoundedCornerShape(16.dp)),
+        enabled = !isLoading,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = colorResource(R.color.skyblue)
+        ),
+        border = ButtonDefaults.outlinedButtonBorder(enabled = !isLoading).copy(
+            brush = Brush.horizontalGradient(
+                listOf(
+                    colorResource(R.color.skyblue),
+                    colorResource(R.color.amber)
+                )
+            ),
+            width = 2.dp
+        )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = colorResource(R.color.skyblue),
+                strokeWidth = 2.dp
+            )
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fingerprint,
+                    contentDescription = stringResource(R.string.biometric_auth_fingerprint_description),
+                    tint = colorResource(R.color.skyblue)
+                )
+                Text(
+                    text = stringResource(R.string.biometric_auth_button),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colorResource(R.color.skyblue)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectAccountButton(
+    onClick: () -> Unit,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+            .height(50.dp)
+            .clip(RoundedCornerShape(16.dp)),
+        enabled = !isLoading,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = colorResource(R.color.skyblue)
+        ),
+        border = ButtonDefaults.outlinedButtonBorder(enabled = !isLoading).copy(
+            brush = Brush.horizontalGradient(
+                listOf(
+                    colorResource(R.color.skyblue),
+                    colorResource(R.color.amber)
+                )
+            ),
+            width = 2.dp
+        )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = colorResource(R.color.skyblue),
+                strokeWidth = 2.dp
+            )
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fingerprint,
+                    contentDescription = stringResource(R.string.biometric_auth_fingerprint_description),
+                    tint = colorResource(R.color.skyblue)
+                )
+                Text(
+                    text = stringResource(R.string.biometric_auth_select_account_button),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colorResource(R.color.skyblue)
+                )
+            }
+        }
     }
 }
 

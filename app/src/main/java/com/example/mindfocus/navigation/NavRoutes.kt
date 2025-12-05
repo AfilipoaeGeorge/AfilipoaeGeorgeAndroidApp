@@ -2,6 +2,7 @@ package com.example.mindfocus.navigation
 
 sealed class NavRoute(val route: String) {
     object Login : NavRoute("login")
+    object BiometricAuth : NavRoute("biometric_auth")
     
     object Home : NavRoute("home")
     object Calibration : NavRoute("calibration")

@@ -61,8 +61,15 @@
     <string name="profile_error_user_not_found">User not found</string>
     <string name="profile_error_failed_to_save_username">Failed to save username: %1$s</string>
     <string name="profile_error_failed_to_save_picture">Failed to save profile picture: %1$s</string>
+    <string name="profile_error_failed_to_delete_account">Failed to delete account: %1$s</string>
     <string name="profile_success_username_updated">Username updated successfully</string>
     <string name="profile_success_picture_updated">Profile picture updated successfully</string>
+    <string name="profile_delete_account">Delete Account</string>
+    <string name="profile_delete_account_hint">Permanently remove your account</string>
+    <string name="profile_delete_account_confirmation_title">Delete Account</string>
+    <string name="profile_delete_account_confirmation_message">Are you sure you want to delete your account? This action cannot be undone. All your data, including sessions, metrics, and baseline will be permanently deleted.</string>
+    <string name="profile_delete_account_confirm">Delete</string>
+    <string name="profile_delete_account_cancel">Cancel</string>
     <string name="profile_picture_folder">Pictures/MindFocus</string>
     <string name="profile_picture_description">Profile picture</string>
     <string name="profile_change_picture_description">Change profile picture</string>
@@ -232,4 +239,43 @@
     <string name="tips_delete_data_title">Delete All Data</string>
     <string name="tips_delete_data_description">Understand what happens when you delete your data</string>
     <string name="tips_delete_data_details">The \"Delete All Data\" option in Settings allows you to permanently remove all your data from the app. This includes: all session records, all metrics and measurements, your calibration baseline, and all settings (which will be reset to defaults). This action cannot be undone, so make sure you really want to delete everything before confirming. After deletion, you\'ll need to recalibrate and start fresh.</string>
+    <string name="tips_icon_delete_account">🗑️</string>
+    <string name="tips_delete_account_title">Delete Account</string>
+    <string name="tips_delete_account_description">Permanently remove your account and all associated data</string>
+    <string name="tips_delete_account_details">If you want to delete your account completely, go to Profile → Delete Account. This will permanently remove your account, all your sessions, metrics, baseline data, and profile information. This action cannot be undone. After deletion, you will be redirected to the Login screen. If you have multiple accounts, only the selected account will be deleted.</string>
+    
+    <!-- Biometric Authentication -->
+    <string name="biometric_auth_title">Fingerprint Authentication</string>
+    <string name="biometric_auth_subtitle">Touch the fingerprint sensor to continue</string>
+    <string name="biometric_auth_subtitle_login">Touch the fingerprint sensor to authenticate</string>
+    <string name="biometric_auth_cancel">Cancel</string>
+    <string name="biometric_auth_button">Fingerprint Authentication</string>
+    <string name="biometric_auth_fingerprint_description">Fingerprint</string>
+    <string name="biometric_auth_not_available">Fingerprint authentication is not available on this device.</string>
+    <string name="biometric_auth_failed">Fingerprint authentication failed. Please try again.</string>
+    <string name="biometric_auth_error">Authentication error: %1$s</string>
+    <string name="biometric_auth_error_generic">Fingerprint authentication error: %1$s</string>
+    <string name="biometric_fragment_tag">BiometricFragment</string>
+    
+    <!-- Login/Register Errors -->
+    <string name="login_error_username_empty">Username cannot be empty</string>
+    <string name="login_error_email_empty">Email cannot be empty</string>
+    <string name="login_error_email_invalid">Please enter a valid email address</string>
+    <string name="login_error_account_limit_reached">The limit of %1$d accounts per device has been reached. Please delete an existing account to create a new one.</string>
+    <string name="login_error_username_exists">Username already exists. Please choose a different username.</string>
+    <string name="login_error_email_exists">Email already registered. Please use login instead.</string>
+    <string name="login_error_user_creation_failed">Failed to create user</string>
+    <string name="login_error_username_not_found">Username not found. Please register or check your username.</string>
+    <string name="login_error_registration_failed">Registration failed: %1$s</string>
+    <string name="login_error_login_failed">Login failed: %1$s</string>
+    <string name="login_error_user_not_found">User not found. Please login manually.</string>
+    <string name="login_error_no_accounts">No accounts found. Please register first.</string>
+    <string name="biometric_auth_select_user">Select account to authenticate</string>
+    <string name="biometric_auth_welcome_back">Welcome back</string>
+    <string name="biometric_auth_unlock_app">Unlock the app with your fingerprint</string>
+    <string name="biometric_auth_use_password">Use username instead</string>
+    <string name="biometric_auth_select_account">Select Account</string>
+    <string name="biometric_auth_authenticate_with">Authenticate with %1$s</string>
+    <string name="biometric_auth_select_account_button">Select Account</string>
+    <string name="account_label">Account %1$d</string>
 </resources>

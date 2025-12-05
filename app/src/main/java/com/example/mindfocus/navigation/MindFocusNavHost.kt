@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.mindfocus.ui.feature.biometric.BiometricAuthScreen
 import com.example.mindfocus.ui.feature.calibration.CalibrationScreen
 import com.example.mindfocus.ui.feature.history.HistoryScreen
 import com.example.mindfocus.ui.feature.home.HomeScreen
@@ -30,6 +31,22 @@ fun MindFocusNavHost(
                 onLoginSuccess = {
                     navController.navigate(NavRoute.Home.route) {
                         popUpTo(NavRoute.Login.route) { inclusive = true }
+                    }
+                },
+                modifier = Modifier
+            )
+        }
+        
+        composable(route = NavRoute.BiometricAuth.route) {
+            BiometricAuthScreen(
+                onAuthSuccess = {
+                    navController.navigate(NavRoute.Home.route) {
+                        popUpTo(NavRoute.BiometricAuth.route) { inclusive = true }
+                    }
+                },
+                onUsePassword = {
+                    navController.navigate(NavRoute.Login.route) {
+                        popUpTo(NavRoute.BiometricAuth.route) { inclusive = true }
                     }
                 },
                 modifier = Modifier
@@ -116,6 +133,11 @@ fun MindFocusNavHost(
             ProfileScreen(
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onAccountDeleted = {
+                    navController.navigate(NavRoute.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 },
                 modifier = Modifier
             )

@@ -49,7 +49,7 @@ android {
     }
     
     androidResources {
-        noCompress("tflite", "task")
+        noCompress += listOf("tflite", "task")
     }
 }
 
@@ -80,7 +80,10 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-
+    
+    // Biometric
+    implementation("androidx.biometric:biometric:1.1.0")
+    
     // CameraX
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.camera2)
