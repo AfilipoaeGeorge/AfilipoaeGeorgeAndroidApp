@@ -156,7 +156,7 @@ fun HomeScreen(
                 onClick = onCalibrationClick,
                 gradientColors = listOf(
                     colorResource(R.color.skyblue),
-                    colorResource(R.color.amber)
+                    colorResource(R.color.skyblue)
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -169,7 +169,7 @@ fun HomeScreen(
                 description = stringResource(R.string.start_session_description),
                 onClick = onStartSessionClick,
                 gradientColors = listOf(
-                    colorResource(R.color.amber),
+                    colorResource(R.color.skyblue),
                     colorResource(R.color.skyblue)
                 ),
                 modifier = Modifier.fillMaxWidth()
@@ -184,7 +184,7 @@ fun HomeScreen(
                 onClick = onHistoryClick,
                 gradientColors = listOf(
                     colorResource(R.color.skyblue),
-                    colorResource(R.color.amber)
+                    colorResource(R.color.skyblue)
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -197,7 +197,7 @@ fun HomeScreen(
                 description = stringResource(R.string.profile_description),
                 onClick = onProfileClick,
                 gradientColors = listOf(
-                    colorResource(R.color.amber),
+                    colorResource(R.color.skyblue),
                     colorResource(R.color.skyblue)
                 ),
                 modifier = Modifier.fillMaxWidth()
@@ -343,7 +343,7 @@ private fun ActionButton(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.horizontalGradient(gradientColors)
+                    gradientColors.first()
                 )
                 .padding(20.dp)
         ) {

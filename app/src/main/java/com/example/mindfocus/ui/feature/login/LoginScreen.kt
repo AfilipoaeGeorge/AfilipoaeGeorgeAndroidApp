@@ -312,12 +312,7 @@ private fun LoginButton(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            colorResource(R.color.skyblue),
-                            colorResource(R.color.amber)
-                        )
-                    )
+                    colorResource(R.color.skyblue)
                 )
                 .clip(RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
@@ -382,7 +377,7 @@ private fun BiometricButton(
             brush = Brush.horizontalGradient(
                 listOf(
                     colorResource(R.color.skyblue),
-                    colorResource(R.color.amber)
+                    colorResource(R.color.skyblue)
                 )
             ),
             width = 2.dp
@@ -434,7 +429,7 @@ private fun SelectAccountButton(
             brush = Brush.horizontalGradient(
                 listOf(
                     colorResource(R.color.skyblue),
-                    colorResource(R.color.amber)
+                    colorResource(R.color.skyblue)
                 )
             ),
             width = 2.dp
