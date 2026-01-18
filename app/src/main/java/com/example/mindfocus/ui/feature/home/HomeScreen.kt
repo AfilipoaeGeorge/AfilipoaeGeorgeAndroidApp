@@ -4,7 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
@@ -115,93 +117,101 @@ fun HomeScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        color = colorResource(R.color.amber)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = colorResource(R.color.amber)
+                        )
+                    }
+                } else {
+                    LastFocusScoreCard(
+                        focusScore = uiState.lastFocusScore,
+                        lastSessionDate = uiState.lastSessionDate,
+                        lastSessionLocation = uiState.lastSessionLocation,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-            } else {
-                LastFocusScoreCard(
-                    focusScore = uiState.lastFocusScore,
-                    lastSessionDate = uiState.lastSessionDate,
-                    lastSessionLocation = uiState.lastSessionLocation,
+                
+                uiState.errorMessage?.let { errorMessage ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage,
+                        color = colorResource(R.color.coralred),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                ActionButton(
+                    icon = Icons.Outlined.Tune,
+                    title = stringResource(R.string.calibration_button),
+                    description = stringResource(R.string.calibration_description),
+                    onClick = onCalibrationClick,
+                    gradientColors = listOf(
+                        colorResource(R.color.skyblue),
+                        colorResource(R.color.skyblue)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                ActionButton(
+                    icon = Icons.Outlined.PlayArrow,
+                    title = stringResource(R.string.start_session_button),
+                    description = stringResource(R.string.start_session_description),
+                    onClick = onStartSessionClick,
+                    gradientColors = listOf(
+                        colorResource(R.color.skyblue),
+                        colorResource(R.color.skyblue)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                ActionButton(
+                    icon = Icons.Outlined.History,
+                    title = stringResource(R.string.history_button),
+                    description = stringResource(R.string.history_description),
+                    onClick = onHistoryClick,
+                    gradientColors = listOf(
+                        colorResource(R.color.skyblue),
+                        colorResource(R.color.skyblue)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                ActionButton(
+                    icon = Icons.Outlined.Person,
+                    title = stringResource(R.string.profile_button),
+                    description = stringResource(R.string.profile_description),
+                    onClick = onProfileClick,
+                    gradientColors = listOf(
+                        colorResource(R.color.skyblue),
+                        colorResource(R.color.skyblue)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            
-            uiState.errorMessage?.let { errorMessage ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = errorMessage,
-                    color = colorResource(R.color.coralred),
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            ActionButton(
-                icon = Icons.Outlined.Tune,
-                title = stringResource(R.string.calibration_button),
-                description = stringResource(R.string.calibration_description),
-                onClick = onCalibrationClick,
-                gradientColors = listOf(
-                    colorResource(R.color.skyblue),
-                    colorResource(R.color.amber)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            ActionButton(
-                icon = Icons.Outlined.PlayArrow,
-                title = stringResource(R.string.start_session_button),
-                description = stringResource(R.string.start_session_description),
-                onClick = onStartSessionClick,
-                gradientColors = listOf(
-                    colorResource(R.color.amber),
-                    colorResource(R.color.skyblue)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            ActionButton(
-                icon = Icons.Outlined.History,
-                title = stringResource(R.string.history_button),
-                description = stringResource(R.string.history_description),
-                onClick = onHistoryClick,
-                gradientColors = listOf(
-                    colorResource(R.color.skyblue),
-                    colorResource(R.color.amber)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            ActionButton(
-                icon = Icons.Outlined.Person,
-                title = stringResource(R.string.profile_button),
-                description = stringResource(R.string.profile_description),
-                onClick = onProfileClick,
-                gradientColors = listOf(
-                    colorResource(R.color.amber),
-                    colorResource(R.color.skyblue)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }
@@ -343,7 +353,7 @@ private fun ActionButton(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.horizontalGradient(gradientColors)
+                    gradientColors.first()
                 )
                 .padding(20.dp)
         ) {
