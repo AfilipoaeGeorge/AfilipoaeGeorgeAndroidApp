@@ -58,7 +58,7 @@ The application was developed and tested under the following conditions:
 - Asynchronous Processing: Coroutines
 
 📂 Project Status:
-This project was developed as part of an academic laboratory assignment and represents a functional prototype focused on real-time focus monitoring and user feedback.
+MindFocus is a functional Android prototype based on my own idea. I independently designed and implemented the application, which was also submitted as part of a university laboratory assignment.
 
 Possible future improvements include:
 - Long-term statistical analysis
